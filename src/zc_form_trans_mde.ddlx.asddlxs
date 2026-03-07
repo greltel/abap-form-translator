@@ -1,0 +1,59 @@
+@Metadata.layer: #CORE
+
+@UI: {
+  headerInfo: { typeName: 'Translation',
+                typeNamePlural: 'Translations',
+                title: { type: #STANDARD, value: 'FormName' } },
+                
+  presentationVariant: [{
+    sortOrder: [
+      { by: 'FormName', direction: #ASC },
+      { by: 'FieldName', direction: #ASC }
+    ],
+    visualizations: [{ type: #AS_LINEITEM }]
+  }]
+}
+annotate view ZC_FORM_TRANS with
+{
+  @UI.facet: [ { id:              'Translation',
+                 purpose:         #STANDARD,
+                 type:            #IDENTIFICATION_REFERENCE,
+                 label:           'Translation Details',
+                 position:        10 } ]
+
+  @UI: { lineItem:       [ { position: 10 } ],
+         identification: [ { position: 10 } ],
+         selectionField: [ { position: 10 } ] }
+  FormName;
+
+  @UI: { lineItem:       [ { position: 20 } ],
+         identification: [ { position: 20 } ],
+         selectionField: [ { position: 20 } ] }
+  FieldName;
+
+  @UI: { lineItem:       [ { position: 30 } ],
+         identification: [ { position: 30 } ],
+         selectionField: [ { position: 30 } ] }
+  LanguageKey;
+
+  @UI: { lineItem:       [ { position: 40 } ],
+         identification: [ { position: 40 } ] }
+  Description;
+  
+  @EndUserText.label: 'Max Length'
+  @UI: { lineItem:       [ { position: 50 } ],
+         identification: [ { position: 50 } ] }
+  MaxLength;
+
+  // Κρύβουμε τα Admin fields από το UI
+  @UI.hidden: true
+  CreatedBy;
+  @UI.hidden: true
+  CreatedAt;
+  @UI.hidden: true
+  LastChangedBy;
+  @UI.hidden: true
+  LastChangedAt;
+  @UI.hidden: true
+  LocalLastChangedAt;
+}

@@ -1,0 +1,40 @@
+managed implementation in class zbp_i_form_trans unique;
+strict ( 2 );
+with draft;
+
+define behavior for ZI_FORM_TRANS alias Translation
+persistent table zabap_form_trans
+draft table zabap_form_drft
+lock master
+total etag LocalLastChangedAt
+authorization master ( instance )
+etag master LocalLastChangedAt
+{
+  create;
+  update;
+  delete;
+
+  field ( readonly ) CreatedAt, CreatedBy, LastChangedAt, LastChangedBy, LocalLastChangedAt;
+  field ( mandatory : create ) FormName, FieldName, LanguageKey;
+  field ( readonly : update ) FormName, FieldName, LanguageKey;
+
+  draft action Edit;
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Resume;
+  draft determine action Prepare;
+
+  mapping for zabap_form_trans
+    {
+      FormName           = form;
+      FieldName          = fieldname;
+      LanguageKey        = langu;
+      Description        = descr;
+      MaxLength          = length;
+      CreatedBy          = created_by;
+      CreatedAt          = created_at;
+      LastChangedBy      = last_changed_by;
+      LastChangedAt      = last_changed_at;
+      LocalLastChangedAt = local_last_changed_at;
+    }
+}

@@ -1,0 +1,7 @@
+{
+  "BASEINFO": {
+    "FROM": [
+      "ZI_FORM_TRANS"
+    ]
+  }
+}

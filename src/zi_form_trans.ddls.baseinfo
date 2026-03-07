@@ -1,0 +1,7 @@
+{
+  "BASEINFO": {
+    "FROM": [
+      "ZABAP_FORM_TRANS"
+    ]
+  }
+}

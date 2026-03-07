@@ -1,0 +1,4 @@
+@EndUserText.label: 'Service Definition for Form Translations'
+define service ZUI_FORM_TRANS_O4 {
+  expose ZC_FORM_TRANS as Translation;
+}
