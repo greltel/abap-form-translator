@@ -42,7 +42,7 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 
 ## Usage
 
-### In your Smartform Driver Program / Print Program
+### In your Adobe / Smartform Driver Program / Print Program
 
 1.  Define a structure for your labels/texts in the form Global Definitions or the Driver Program.
 2.  Populate it with default values (optional).
