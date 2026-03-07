@@ -68,4 +68,5 @@ NEW zcl_form_translation( )->translate_form(
     cs_form_elements = gs_labels ).         " The structure to be translated
 
 " 3. The gs_labels structure now contains the translated texts from ZDB_FORM_TRANS
-"    Pass this structure to your Smartform / Adobe Form interface.
+"    Pass this![2026-03-07 23-40-52](https://github.com/user-attachments/assets/287eddd4-ccd3-4d76-ad06-8ec28ffe29d9)
+ structure to your Smartform / Adobe Form interface.
