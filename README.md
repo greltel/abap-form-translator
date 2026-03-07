@@ -33,6 +33,7 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 * **Generic:** Works with **any** ABAP structure or Form interface using RTTI.
 * **Performance:** Optimized with table buffering to ensure zero impact on print times.
 * **Unit Tested:** Includes built-in ABAP Unit tests.
+* **Fiori Elements App** built entirely with the ABAP RESTful Application Programming Model (RAP) for maintaining form translations
 
 ## Design Goals-Features
 
