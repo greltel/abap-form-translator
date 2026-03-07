@@ -5,7 +5,7 @@ CLASS zcl_form_translation DEFINITION
 
   PUBLIC SECTION.
 
-    CONSTANTS c_version TYPE string VALUE '1.0.0' ##NEEDED.
+    CONSTANTS c_version TYPE string VALUE '1.1.0' ##NEEDED.
 
     TYPES ty_fieldname_range TYPE RANGE OF zabap_form_trans-fieldname.
 

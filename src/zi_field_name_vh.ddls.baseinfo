@@ -2,9 +2,6 @@
   "BASEINFO": {
     "FROM": [
       "ZABAP_FORM_TRANS"
-    ],
-    "ASSOCIATED": [
-      "I_LANGUAGETEXT"
     ]
   }
 }

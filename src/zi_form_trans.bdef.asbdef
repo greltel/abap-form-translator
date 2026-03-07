@@ -22,7 +22,15 @@ etag master LocalLastChangedAt
   draft action Activate optimized;
   draft action Discard;
   draft action Resume;
-  draft determine action Prepare;
+  draft determine action Prepare
+  {
+    validation validateMaxLength;
+    validation validateDescription;
+  }
+
+  validation validateMaxLength on save { field MaxLength; create; update; }
+
+  validation validateDescription on save { field Description; create; update; }
 
   mapping for zabap_form_trans
     {

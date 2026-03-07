@@ -11,11 +11,21 @@ define root view entity ZC_FORM_TRANS
   as projection on ZI_FORM_TRANS
 
 {
+      @Consumption.valueHelpDefinition: [ { entity: { name: 'ZI_FORM_NAME_VH', element: 'FormName' } } ]
   key FormName,
+
+      @Consumption.valueHelpDefinition: [ { entity: { name: 'ZI_FIELD_NAME_VH', element: 'FieldName' },
+                                            additionalBinding: [ { localElement: 'FormName',
+                                                                   element: 'FormName',
+                                                                   usage: #FILTER_AND_RESULT } ] } ]
   key FieldName,
 
       @Consumption.valueHelpDefinition: [ { entity: { name: 'I_Language', element: 'Language' } } ]
+      @ObjectModel.text.element: [ 'LanguageName' ]
   key LanguageKey,
+
+      @UI.hidden: true
+      _LanguageText.LanguageName as LanguageName,
 
       @Search.defaultSearchElement: true
       Description,

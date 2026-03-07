@@ -1,6 +1,7 @@
 {
   "BASEINFO": {
     "FROM": [
+      "I_LANGUAGETEXT",
       "ZI_FORM_TRANS"
     ]
   }
