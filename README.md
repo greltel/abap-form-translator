@@ -1,15 +1,15 @@
-# ABAP Smartform Translator
+# ABAP Form Translator
 # ✅ Status: Release (v1.0.0)
 > **Open Source Contribution:** This project is community-driven and **Open Source**! 🚀  
 > If you spot a bug or have an idea for a cool enhancement, your contributions are more than welcome. Feel free to open an **Issue** or submit a **Pull Request**.
 
 ![ABAP Cloud](https://img.shields.io/badge/ABAP-Cloud%20Ready-green)
 ![ABAP Version](https://img.shields.io/badge/ABAP-7.57%2B-blue)
-[![Code Statistics](https://img.shields.io/badge/CodeStatistics-abaplint-blue)](https://abaplint.app/stats/greltel/abap-smartform-translator)
+[![Code Statistics](https://img.shields.io/badge/CodeStatistics-abaplint-blue)](https://abaplint.app/stats/greltel/abap-form-translator)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/endpoint?url=https://shield.abappm.com/github/greltel/abap-smartform-translator/src/zcl_form_translation.clas.abap/c_version)
+![Version](https://img.shields.io/endpoint?url=https://shield.abappm.com/github/greltel/abap-form-translator/src/zcl_form_translation.clas.abap/c_version)
 
-A lightweight, dynamic **runtime translation tool** for SAP Smartforms.
+A lightweight, dynamic **runtime translation tool** for SAP forms.
 It decouples text management from form development, allowing functional consultants or users to maintain labels via a simple database table (`SM30`,`Business Configuration`), bypassing the complex standard SE63 workflow.
 
 # Table of contents
@@ -20,14 +20,14 @@ It decouples text management from form development, allowing functional consulta
 5. [Usage](#Usage)
 
 ## License
-This project is licensed under the [MIT License](https://github.com/greltel/abap-smartform-translator/blob/main/LICENSE).
+This project is licensed under the [MIT License](https://github.com/greltel/abap-form-translator/blob/main/LICENSE).
 
 ## Contributors-Developers
 The repository was created by [George Drakos](https://www.linkedin.com/in/george-drakos/).
 
 ## Key Benefits
 
-* **No more SE63:** Forget about the painful standard translation process for Smartforms.
+* **No more SE63:** Forget about the painful standard translation process for forms.
 * **Zero Hardcoding:** Keep your form logic clean. No more `IF sy-langu = 'D'. text = 'Kunde'. ENDIF`.
 * **Hot-Swap Texts:** Change a label description in Production without a Transport Request.
 * **Generic:** Works with **any** ABAP structure or Form interface using RTTI.
@@ -44,9 +44,9 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 
 ### In your Smartform Driver Program / Print Program
 
-1.  Define a structure for your labels/texts in the Smartform Global Definitions or the Driver Program.
+1.  Define a structure for your labels/texts in the form Global Definitions or the Driver Program.
 2.  Populate it with default values (optional).
-3.  Call the translator **before** calling the Smartform Function Module.
+3.  Call the translator **before** calling the form Function Module(for smartforms).
 
 ```abap
 DATA: BEGIN OF gs_labels,
