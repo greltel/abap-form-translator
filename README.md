@@ -35,6 +35,8 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 * **Unit Tested:** Includes built-in ABAP Unit tests.
 * **Fiori Elements App** built entirely with the ABAP RESTful Application Programming Model (RAP) for maintaining form translations
 
+![2026-03-07 23-40-52](https://github.com/user-attachments/assets/becf5ae2-4df8-4431-baca-0b66c9ba50a2)
+
 ## Design Goals-Features
 
 * Install via [ABAPGit](http://abapgit.org)
@@ -68,5 +70,4 @@ NEW zcl_form_translation( )->translate_form(
     cs_form_elements = gs_labels ).         " The structure to be translated
 
 " 3. The gs_labels structure now contains the translated texts from ZDB_FORM_TRANS
-"    Pass this![2026-03-07 23-40-52](https://github.com/user-attachments/assets/287eddd4-ccd3-4d76-ad06-8ec28ffe29d9)
- structure to your Smartform / Adobe Form interface.
+"    Pass this structure to your Smartform / Adobe Form interface.
