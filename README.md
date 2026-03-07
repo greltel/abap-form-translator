@@ -10,7 +10,7 @@
 ![Version](https://img.shields.io/endpoint?url=https://shield.abappm.com/github/greltel/abap-form-translator/src/zcl_form_translation.clas.abap/c_version)
 
 A lightweight, dynamic **runtime translation tool** for SAP forms.
-It decouples text management from form development, allowing functional consultants or users to maintain labels via a simple database table (`SM30`,`Business Configuration`), bypassing the complex standard SE63 workflow.
+It decouples text management from form development, allowing functional consultants or users to maintain labels via a simple database table (`SM30`,`Business Configuration`,`RAP Application`), bypassing the complex standard SE63 workflow.
 
 # Table of contents
 1. [License](#License)
