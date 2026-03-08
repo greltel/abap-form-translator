@@ -4,8 +4,7 @@
 > If you spot a bug or have an idea for a cool enhancement, your contributions are more than welcome. Feel free to open an **Issue** or submit a **Pull Request**.
 
 ![ABAP Cloud](https://img.shields.io/badge/ABAP-Cloud%20Ready-green)
-[![ABAP Version](https://img.shields.io/badge/ABAP-7.54%2B-blue)]
-(https://abaplint.app/stats/greltel/abap-form-translator/statement_compatibility)
+[![ABAP Version](https://img.shields.io/badge/ABAP-7.54%2B-blue )](https://abaplint.app/stats/greltel/abap-form-translator/statement_compatibility)
 [![Code Statistics](https://img.shields.io/badge/CodeStatistics-abaplint-blue)](https://abaplint.app/stats/greltel/abap-form-translator)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Version](https://img.shields.io/endpoint?url=https://shield.abappm.com/github/greltel/abap-form-translator/src/zcl_form_translation.clas.abap/c_version)
