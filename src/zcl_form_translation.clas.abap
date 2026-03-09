@@ -20,8 +20,6 @@ CLASS zcl_form_translation DEFINITION
         !cs_form_elements   TYPE any .
   PROTECTED SECTION.
 
-    CONSTANTS c_sign_include     TYPE ddsign     VALUE 'I'.
-    CONSTANTS c_options_equal    TYPE ddoption   VALUE 'EQ'.
     CONSTANTS c_default_language TYPE syst_langu VALUE 'E'.
 
     TYPES tt_zabap_form_transv TYPE STANDARD TABLE OF zabap_form_trans WITH EMPTY KEY.
