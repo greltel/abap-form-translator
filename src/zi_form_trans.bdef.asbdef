@@ -18,6 +18,8 @@ etag master LocalLastChangedAt
   field ( mandatory : create ) FormName, FieldName, LanguageKey;
   field ( readonly : update ) FormName, FieldName, LanguageKey;
 
+  factory action copyToLanguage parameter ZDD_COPY_LANG_POPUP [1];
+
   draft action Edit;
   draft action Activate optimized;
   draft action Discard;

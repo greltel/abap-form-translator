@@ -19,8 +19,7 @@ CLASS zcl_form_translation DEFINITION
       CHANGING
         !cs_form_elements   TYPE any .
   PROTECTED SECTION.
-
-    CONSTANTS c_default_language TYPE syst_langu VALUE 'E'.
+    CONSTANTS c_default_language TYPE spras VALUE 'E'.
 
     TYPES tt_zabap_form_transv TYPE STANDARD TABLE OF zabap_form_trans WITH EMPTY KEY.
 
@@ -32,16 +31,16 @@ CLASS zcl_form_translation DEFINITION
 
     CLASS-DATA t_buffer TYPE STANDARD TABLE OF ty_buffer WITH EMPTY KEY.
 
-    "! <p class="shorttext synchronized" lang="en"></p>
+    "! <p class="shorttext synchronized"></p>
     "!
-    "! @parameter iv_formname | <p class="shorttext synchronized" lang="en">Smart Forms: Form Name</p>
-    "! @parameter iv_langu    | <p class="shorttext synchronized" lang="en">ABAP System Field: Language Key of Text Environment</p>
+    "! @parameter iv_formname | <p class="shorttext synchronized">Smart Forms: Form Name</p>
+    "! @parameter iv_langu    | <p class="shorttext synchronized">ABAP System Field: Language Key of Text Environment</p>
     METHODS get_translations
-      IMPORTING
-                !iv_formname           TYPE zabap_form_trans_name
-                !iv_langu              TYPE zabap_form_trans_langu
-                !iv_enable_fallback    TYPE abap_boolean DEFAULT abap_true
+      IMPORTING iv_formname            TYPE zabap_form_trans_name
+                iv_langu               TYPE zabap_form_trans_langu
+                iv_enable_fallback     TYPE abap_boolean DEFAULT abap_true
       RETURNING VALUE(re_translations) TYPE zcl_form_translation=>tt_zabap_form_transv.
+
   PRIVATE SECTION.
 ENDCLASS.
 

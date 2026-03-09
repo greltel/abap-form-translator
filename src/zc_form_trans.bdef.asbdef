@@ -13,4 +13,5 @@ define behavior for ZC_FORM_TRANS alias Translation
   use action Discard;
   use action Resume;
   use action Prepare;
+  use action copyToLanguage;
 }

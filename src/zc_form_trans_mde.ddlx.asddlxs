@@ -1,66 +1,67 @@
 @Metadata.layer: #CORE
 
-@UI: {
-  headerInfo: { typeName: 'Translation',
-                typeNamePlural: 'Translations',
-                title: { type: #STANDARD, value: 'FormName' } },
-                
-  presentationVariant: [{
-    sortOrder: [ { by: 'FormName', direction: #ASC }, { by: 'FieldName', direction: #ASC } ],
-    visualizations: [{ type: #AS_LINEITEM }]
-  }]
-}
+@UI.headerInfo: { typeName: 'Translation',
+                  typeNamePlural: 'Translations',
+                  title: { type: #STANDARD, value: 'FormName' } }
+
+@UI.presentationVariant: [ { sortOrder: [ { by: 'FormName',  direction: #ASC },
+                                          { by: 'FieldName', direction: #ASC } ],
+                             visualizations: [ { type: #AS_LINEITEM } ] } ]
+
 annotate view ZC_FORM_TRANS with
+
 {
-  /* Ορίζουμε τα 2 "κουτιά" (Facets) */
-  @UI.facet: [ 
-    { id:              'Technical',
-      purpose:         #STANDARD,
-      type:            #FIELDGROUP_REFERENCE,
-      targetQualifier: 'TechGrp',
-      label:           'Technical Details',
-      position:        10 },
-    { id:              'Translation',
-      purpose:         #STANDARD,
-      type:            #FIELDGROUP_REFERENCE,
-      targetQualifier: 'TransGrp',
-      label:           'Translation Data',
-      position:        20 }
-  ]
 
-
-  @UI: { lineItem:       [ { position: 10 } ],
-         selectionField: [ { position: 10 } ],
-         fieldGroup:     [ { qualifier: 'TechGrp', position: 10 } ] }
+  @UI.facet: [ { id: 'Technical',
+                 purpose: #STANDARD,
+                 type: #FIELDGROUP_REFERENCE,
+                 targetQualifier: 'TechGrp',
+                 label: 'Technical Details',
+                 position: 10 },
+               { id: 'Translation',
+                 purpose: #STANDARD,
+                 type: #FIELDGROUP_REFERENCE,
+                 targetQualifier: 'TransGrp',
+                 label: 'Translation Data',
+                 position: 20 } ]
+  @UI.fieldGroup: [ { qualifier: 'TechGrp', position: 10 } ]
+  @UI.lineItem: [ { position: 10 } ]
+  @UI.selectionField: [ { position: 10 } ]
   FormName;
 
-  @UI: { lineItem:       [ { position: 20 } ],
-         selectionField: [ { position: 20 } ],
-         fieldGroup:     [ { qualifier: 'TechGrp', position: 20 } ] }
+  @UI.fieldGroup: [ { qualifier: 'TechGrp', position: 20 } ]
+  @UI.lineItem: [ { position: 20 } ]
+  @UI.selectionField: [ { position: 20 } ]
   FieldName;
 
-  @UI: { lineItem:       [ { position: 30 } ],
-         selectionField: [ { position: 30 } ],
-         fieldGroup:     [ { qualifier: 'TechGrp', position: 30 } ] }
+  @UI.fieldGroup: [ { qualifier: 'TechGrp', position: 30 } ]
+  @UI.identification: [ { type: #FOR_ACTION, dataAction: 'copyToLanguage', label: 'Copy Language' } ]
+  @UI.lineItem: [ { position: 30 },
+                  { type: #FOR_ACTION, dataAction: 'copyToLanguage', label: 'Copy Language' } ]
+  @UI.selectionField: [ { position: 30 } ]
   LanguageKey;
 
-  @UI: { lineItem:       [ { position: 40 } ],
-         fieldGroup:     [ { qualifier: 'TransGrp', position: 10 } ] }
+  @UI.fieldGroup: [ { qualifier: 'TransGrp', position: 10 } ]
+  @UI.lineItem: [ { position: 40 } ]
   Description;
 
   @EndUserText.label: 'Max Length'
-  @UI: { lineItem:       [ { position: 50 } ],
-         fieldGroup:     [ { qualifier: 'TransGrp', position: 20 } ] }
+  @UI.fieldGroup: [ { qualifier: 'TransGrp', position: 20 } ]
+  @UI.lineItem: [ { position: 50 } ]
   MaxLength;
 
   @UI.hidden: true
   CreatedBy;
+
   @UI.hidden: true
   CreatedAt;
+
   @UI.hidden: true
   LastChangedBy;
+
   @UI.hidden: true
   LastChangedAt;
+
   @UI.hidden: true
   LocalLastChangedAt;
 }
