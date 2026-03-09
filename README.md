@@ -1,5 +1,5 @@
 # ABAP Form Translator
-# ✅ Status: Release ![Version](https://img.shields.io/endpoint?url=https://shield.abappm.com/github/greltel/abap-form-translator/src/zcl_form_translation.clas.abap/c_version)![Version](https://img.shields.io/endpoint?url=https://shield.abappm.com/github/greltel/abap-form-translator/src/zcl_form_translation.clas.abap/c_version)
+# ✅ Status: Release (1.2.0)
 > **Open Source Contribution:** This project is community-driven and **Open Source**! 🚀  
 > If you spot a bug or have an idea for a cool enhancement, your contributions are more than welcome. Feel free to open an **Issue** or submit a **Pull Request**.
 
