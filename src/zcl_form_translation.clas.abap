@@ -5,23 +5,34 @@ CLASS zcl_form_translation DEFINITION
 
   PUBLIC SECTION.
 
-    CONSTANTS c_version TYPE string VALUE '1.1.0' ##NEEDED.
-
-    TYPES ty_fieldname_range TYPE RANGE OF zabap_form_trans-fieldname.
+    CONSTANTS c_version TYPE string VALUE '1.2.0' ##NEEDED.
 
     "! <p class="shorttext synchronized">Translates fields of a structure based on DB configuration</p>
     "! @parameter iv_formname | <p class="shorttext synchronized">Smartform/Form Name (Key in DB)</p>
-    "! @parameter iv_langu | <p class="shorttext synchronized">Target Language (Default: SY-LANGU)</p>
+    "! @parameter iv_langu | <p class="shorttext synchronized">Target Language</p>
     "! @parameter cs_form_elements | <p class="shorttext synchronized">Structure containing fields to be translated</p>
     METHODS translate_form
       IMPORTING
-        !iv_formname      TYPE zabap_form_trans_name
-        !iv_langu         TYPE zabap_form_trans_langu DEFAULT syst-langu
+        !iv_formname        TYPE zabap_form_trans_name
+        !iv_langu           TYPE zabap_form_trans_langu OPTIONAL
+        !iv_enable_fallback TYPE abap_boolean DEFAULT abap_true
       CHANGING
-        !cs_form_elements TYPE any .
+        !cs_form_elements   TYPE any .
   PROTECTED SECTION.
 
+    CONSTANTS c_sign_include     TYPE ddsign     VALUE 'I'.
+    CONSTANTS c_options_equal    TYPE ddoption   VALUE 'EQ'.
+    CONSTANTS c_default_language TYPE syst_langu VALUE 'E'.
+
     TYPES tt_zabap_form_transv TYPE STANDARD TABLE OF zabap_form_trans WITH EMPTY KEY.
+
+    TYPES: BEGIN OF ty_buffer,
+             formname     TYPE zabap_form_trans_name,
+             langu        TYPE zabap_form_trans_langu,
+             translations TYPE tt_zabap_form_transv,
+           END OF ty_buffer.
+
+    CLASS-DATA t_buffer TYPE STANDARD TABLE OF ty_buffer WITH EMPTY KEY.
 
     "! <p class="shorttext synchronized" lang="en"></p>
     "!
@@ -31,14 +42,14 @@ CLASS zcl_form_translation DEFINITION
       IMPORTING
                 !iv_formname           TYPE zabap_form_trans_name
                 !iv_langu              TYPE zabap_form_trans_langu
-                !iv_fieldnames         TYPE ty_fieldname_range
+                !iv_enable_fallback    TYPE abap_boolean DEFAULT abap_true
       RETURNING VALUE(re_translations) TYPE zcl_form_translation=>tt_zabap_form_transv.
   PRIVATE SECTION.
 ENDCLASS.
 
 
 
-CLASS zcl_form_translation IMPLEMENTATION.
+CLASS ZCL_FORM_TRANSLATION IMPLEMENTATION.
 
 
   METHOD translate_form.
@@ -49,13 +60,9 @@ CLASS zcl_form_translation IMPLEMENTATION.
 
     TRY.
 
-        DATA(lt_translations) = me->get_translations( iv_fieldnames = VALUE ty_fieldname_range( FOR <fs> IN CAST cl_abap_structdescr( cl_abap_typedescr=>describe_by_data( cs_form_elements ) )->components
-                                                                                              ( low    = <fs>-name
-                                                                                                high   = <fs>-name
-                                                                                                sign   = 'I'
-                                                                                                option = 'EQ' )  )
-                                                      iv_formname   = iv_formname
-                                                      iv_langu      = iv_langu ).
+        DATA(lt_translations) = me->get_translations( iv_formname        = iv_formname
+                                                      iv_langu           = iv_langu
+                                                      iv_enable_fallback = iv_enable_fallback  ).
 
       CATCH cx_sy_move_cast_error.
     ENDTRY.
@@ -99,13 +106,40 @@ CLASS zcl_form_translation IMPLEMENTATION.
   METHOD get_translations.
 
     TRY.
+
+        DATA(lv_langu) = COND #( WHEN iv_langu IS NOT INITIAL THEN iv_langu
+                                 ELSE cl_abap_context_info=>get_user_language_abap_format( ) ).
+
+        ASSIGN t_buffer[ formname = iv_formname langu = lv_langu ] TO FIELD-SYMBOL(<fs_cached>).
+        IF syst-subrc IS INITIAL AND <fs_cached> IS ASSIGNED.
+          re_translations = <fs_cached>-translations.
+          RETURN.
+        ENDIF.
+
+        APPEND INITIAL LINE TO t_buffer ASSIGNING FIELD-SYMBOL(<fs_buffer>).
+        <fs_buffer>-formname = iv_formname.
+        <fs_buffer>-langu    = lv_langu.
+
         SELECT FROM zabap_form_trans
-          FIELDS *
-          WHERE fieldname IN @iv_fieldnames
-            AND form  EQ @iv_formname
-            AND langu EQ @( COND #( WHEN iv_langu IS NOT INITIAL THEN iv_langu
-                                    ELSE cl_abap_context_info=>get_user_language_abap_format( ) ) )
-           INTO TABLE @re_translations.
+          FIELDS mandt,form,fieldname,langu,descr,length
+          WHERE form  EQ @iv_formname
+            AND langu EQ @lv_langu
+          INTO CORRESPONDING FIELDS OF TABLE @<fs_buffer>-translations.
+
+        IF    <fs_buffer>-translations IS INITIAL
+          AND lv_langu NE c_default_language
+          AND iv_enable_fallback EQ abap_true.
+
+          SELECT FROM zabap_form_trans
+            FIELDS mandt,form,fieldname,langu,descr,length
+            WHERE form  EQ @iv_formname
+              AND langu EQ @c_default_language
+            INTO CORRESPONDING FIELDS OF TABLE @<fs_buffer>-translations.
+
+        ENDIF.
+
+        re_translations = <fs_buffer>-translations.
+
       CATCH cx_abap_context_info_error.
     ENDTRY.
 

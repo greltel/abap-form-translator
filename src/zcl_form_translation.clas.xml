@@ -48,7 +48,7 @@
      <CMPNAME>TRANSLATE_FORM</CMPNAME>
      <SCONAME>IV_LANGU</SCONAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Target Language (Default: SY-LANGU)</DESCRIPT>
+     <DESCRIPT>Target Language</DESCRIPT>
     </SEOSUBCOTX>
    </DESCRIPTIONS_SUB>
   </asx:values>

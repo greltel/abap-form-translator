@@ -14,6 +14,11 @@ ENDCLASS.
 
 CLASS lhc_Translation IMPLEMENTATION.
   METHOD get_instance_authorizations.
+    IF keys IS NOT INITIAL.
+    ENDIF.
+    IF requested_authorizations IS NOT INITIAL.
+    ENDIF.
+    CLEAR result.
   ENDMETHOD.
 
   METHOD validateMaxLength.
