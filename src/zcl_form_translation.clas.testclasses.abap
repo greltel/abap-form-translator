@@ -21,12 +21,16 @@ CLASS ltc_translator_test DEFINITION FOR TESTING
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-    DATA: cut TYPE REF TO lcl_test_wrapper.
 
-    METHODS:
-      setup,
-      test_translation_success FOR TESTING,
-      test_translation_length FOR TESTING.
+    TYPES: BEGIN OF label,
+             lbl_name TYPE string,
+           END OF label.
+
+    DATA cut TYPE REF TO lcl_test_wrapper.
+
+    METHODS setup.
+    METHODS test_translation_success FOR TESTING.
+    METHODS test_translation_length  FOR TESTING.
 ENDCLASS.
 
 CLASS ltc_translator_test IMPLEMENTATION.
@@ -37,10 +41,6 @@ CLASS ltc_translator_test IMPLEMENTATION.
 
   METHOD test_translation_success.
 
-    TYPES: BEGIN OF label,
-             lbl_name TYPE string,
-           END OF label.
-
     DATA labels TYPE label.
 
     labels-lbl_name = 'Original'.
@@ -48,28 +48,28 @@ CLASS ltc_translator_test IMPLEMENTATION.
     cut->mock_data = VALUE #(
       ( form = 'ZTEST' fieldname = 'LBL_NAME' langu = 'E' descr = 'Success!' ) ).
 
-    cut->translate_form( EXPORTING formname = 'ZTEST'
-                            CHANGING  form_elements = labels ).
+    cut->translate_form( EXPORTING formname      = 'ZTEST'
+                            CHANGING form_elements = labels ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'Success!' act = labels-lbl_name ).
 
   ENDMETHOD.
 
   METHOD test_translation_length.
-    TYPES: BEGIN OF ty_dummy,
-             lbl_name TYPE string,
-           END OF ty_dummy.
-    DATA ls_data TYPE ty_dummy.
 
-    ls_data-lbl_name = 'Original'.
+    DATA labels TYPE label.
 
-    cut->mock_data = VALUE #( ( form = 'ZTEST' fieldname = 'LBL_NAME' langu = 'E' descr = 'Success!' length = 3 ) ).
+    labels-lbl_name = 'Original'.
+
+    cut->mock_data = VALUE #(
+      ( form = 'ZTEST' fieldname = 'LBL_NAME' langu = 'E' descr = 'Success!' length = 3 ) ).
 
     cut->translate_form( EXPORTING formname      = 'ZTEST'
-                            CHANGING  form_elements = ls_data ).
+                            CHANGING form_elements = labels ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'Suc'
-                                        act = ls_data-lbl_name ).
+                                        act = labels-lbl_name ).
+
   ENDMETHOD.
 
 ENDCLASS.

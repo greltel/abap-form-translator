@@ -45,10 +45,6 @@ CLASS zcl_form_translation DEFINITION
     CLASS-DATA buffer TYPE HASHED TABLE OF buffer_entry
                       WITH UNIQUE KEY formname langu.
 
-    "! <p class="shorttext synchronized"></p>
-    "!
-    "! @parameter formname | <p class="shorttext synchronized">Smart Forms: Form Name</p>
-    "! @parameter langu    | <p class="shorttext synchronized">ABAP System Field: Language Key of Text Environment</p>
     METHODS get_translations
       IMPORTING formname               TYPE zabap_form_trans_name
                 langu                  TYPE zabap_form_trans_langu
