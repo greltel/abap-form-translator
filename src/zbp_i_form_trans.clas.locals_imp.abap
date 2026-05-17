@@ -18,7 +18,16 @@ ENDCLASS.
 
 CLASS lhc_translation IMPLEMENTATION.
   METHOD get_instance_authorizations.
-    CLEAR result.
+    " Allow all: every requested instance operation is granted.
+    " Access is governed by Fiori catalog / service binding roles, not per-instance.
+    result = VALUE #( FOR key IN keys
+                      ( %tky        = key-%tky
+                        %update      = COND #( WHEN requested_authorizations-%update = if_abap_behv=>mk-on
+                                               THEN if_abap_behv=>auth-allowed )
+                        %action-Edit = COND #( WHEN requested_authorizations-%action-Edit = if_abap_behv=>mk-on
+                                               THEN if_abap_behv=>auth-allowed )
+                        %delete      = COND #( WHEN requested_authorizations-%delete = if_abap_behv=>mk-on
+                                               THEN if_abap_behv=>auth-allowed ) ) ).
   ENDMETHOD.
 
   METHOD validatemaxlength.
@@ -69,21 +78,53 @@ CLASS lhc_translation IMPLEMENTATION.
          ALL FIELDS WITH CORRESPONDING #( keys )
          RESULT DATA(translations).
 
+    " Collect the prospective target keys so duplicates are detected before CREATE
+    DATA target_keys TYPE TABLE FOR READ IMPORT zi_form_trans.
+
+    LOOP AT translations INTO DATA(source).
+      DATA(requested_language) = keys[ %tky = source-%tky ]-%param-TargetLanguage.
+      IF requested_language IS INITIAL.
+        CONTINUE.
+      ENDIF.
+      APPEND VALUE #( %key-FormName    = source-formname
+                      %key-FieldName   = source-fieldname
+                      %key-LanguageKey = requested_language ) TO target_keys.
+    ENDLOOP.
+
+    READ ENTITIES OF zi_form_trans IN LOCAL MODE
+         ENTITY translation
+         ALL FIELDS WITH target_keys
+         RESULT DATA(existing).
+
     DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
 
     LOOP AT translations INTO DATA(translation).
       DATA(target_language) = keys[ %tky = translation-%tky ]-%param-TargetLanguage.
 
-      IF target_language IS NOT INITIAL.
-        APPEND VALUE #( %cid        = keys[ %tky = translation-%tky ]-%cid
-                        formname    = translation-formname
-                        fieldname   = translation-fieldname
-                        languagekey = target_language
-                        description = translation-description
-                        maxlength   = translation-maxlength
-                        %is_draft   = if_abap_behv=>mk-on )
-               TO new_entries.
+      IF target_language IS INITIAL.
+        CONTINUE.
       ENDIF.
+
+      IF line_exists( existing[ formname    = translation-formname
+                                fieldname   = translation-fieldname
+                                languagekey = target_language ] ).
+        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+        APPEND VALUE #( %tky = translation-%tky
+                        %msg = new_message_with_text(
+                                   severity = if_abap_behv_message=>severity-error
+                                   text     = |Translation already exists for language { target_language }.| ) )
+               TO reported-translation.
+        CONTINUE.
+      ENDIF.
+
+      APPEND VALUE #( %cid        = keys[ %tky = translation-%tky ]-%cid
+                      formname    = translation-formname
+                      fieldname   = translation-fieldname
+                      languagekey = target_language
+                      description = translation-description
+                      maxlength   = translation-maxlength
+                      %is_draft   = if_abap_behv=>mk-on )
+             TO new_entries.
     ENDLOOP.
 
     MODIFY ENTITIES OF zi_form_trans IN LOCAL MODE
