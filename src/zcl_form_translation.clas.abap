@@ -36,13 +36,13 @@ CLASS zcl_form_translation DEFINITION
 
     TYPES translations TYPE STANDARD TABLE OF translation WITH EMPTY KEY.
 
-    TYPES: BEGIN OF ty_buffer,
+    TYPES: BEGIN OF buffer_entry,
              formname     TYPE zabap_form_trans_name,
              langu        TYPE zabap_form_trans_langu,
              translations TYPE translations,
-           END OF ty_buffer.
+           END OF buffer_entry.
 
-    CLASS-DATA buffer TYPE HASHED TABLE OF ty_buffer
+    CLASS-DATA buffer TYPE HASHED TABLE OF buffer_entry
                       WITH UNIQUE KEY formname langu.
 
     "! <p class="shorttext synchronized"></p>
@@ -107,29 +107,29 @@ CLASS zcl_form_translation IMPLEMENTATION.
   METHOD get_translations.
     TRY.
 
-        DATA(lv_langu) = COND #( WHEN langu IS NOT INITIAL
+        DATA(language) = COND #( WHEN langu IS NOT INITIAL
                                  THEN langu
                                  ELSE cl_abap_context_info=>get_user_language_abap_format( ) ).
 
         ASSIGN buffer[ formname = formname
-                         langu    = lv_langu ] TO FIELD-SYMBOL(<cached>).
+                         langu    = language ] TO FIELD-SYMBOL(<cached>).
         IF syst-subrc IS INITIAL AND <cached> IS ASSIGNED.
           result = <cached>-translations.
           RETURN.
         ENDIF.
 
         INSERT VALUE #( formname = formname
-                        langu    = lv_langu )
+                        langu    = language )
                INTO TABLE buffer ASSIGNING FIELD-SYMBOL(<buffer>).
 
         SELECT FROM zabap_form_trans
           FIELDS form, fieldname, langu, descr, length
           WHERE form  = @formname
-            AND langu = @lv_langu
+            AND langu = @language
           INTO TABLE @<buffer>-translations.
 
         IF     <buffer>-translations IS INITIAL
-           AND lv_langu                 <> default_language
+           AND language                 <> default_language
            AND enable_fallback        = abap_true.
 
           SELECT FROM zabap_form_trans

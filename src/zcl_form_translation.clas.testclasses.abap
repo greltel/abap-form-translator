@@ -37,20 +37,21 @@ CLASS ltc_translator_test IMPLEMENTATION.
 
   METHOD test_translation_success.
 
-    TYPES: BEGIN OF ty_dummy,
+    TYPES: BEGIN OF label,
              lbl_name TYPE string,
-           END OF ty_dummy.
-    DATA ls_data TYPE ty_dummy.
+           END OF label.
 
-    ls_data-lbl_name = 'Original'.
+    DATA labels TYPE label.
+
+    labels-lbl_name = 'Original'.
 
     cut->mock_data = VALUE #(
       ( form = 'ZTEST' fieldname = 'LBL_NAME' langu = 'E' descr = 'Success!' ) ).
 
     cut->translate_form( EXPORTING formname = 'ZTEST'
-                            CHANGING  form_elements = ls_data ).
+                            CHANGING  form_elements = labels ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'Success!' act = ls_data-lbl_name ).
+    cl_abap_unit_assert=>assert_equals( exp = 'Success!' act = labels-lbl_name ).
 
   ENDMETHOD.
 
