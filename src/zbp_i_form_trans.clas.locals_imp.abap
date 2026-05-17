@@ -18,10 +18,6 @@ ENDCLASS.
 
 CLASS lhc_translation IMPLEMENTATION.
   METHOD get_instance_authorizations.
-    IF keys IS NOT INITIAL.
-    ENDIF.
-    IF requested_authorizations IS NOT INITIAL.
-    ENDIF.
     CLEAR result.
   ENDMETHOD.
 
@@ -29,15 +25,15 @@ CLASS lhc_translation IMPLEMENTATION.
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          FIELDS ( maxlength ) WITH CORRESPONDING #( keys )
-         RESULT DATA(lt_translations).
+         RESULT DATA(translations).
 
-    LOOP AT lt_translations INTO DATA(ls_trans).
+    LOOP AT translations INTO DATA(translation).
 
-      IF ls_trans-maxlength < 0.
+      IF translation-maxlength < 0.
 
-        APPEND VALUE #( %tky = ls_trans-%tky ) TO failed-translation.
+        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
 
-        APPEND VALUE #( %tky = ls_trans-%tky
+        APPEND VALUE #( %tky = translation-%tky
                         %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
                                                       text     = 'Max Length cannot be negative.' ) )
                TO reported-translation.
@@ -51,14 +47,13 @@ CLASS lhc_translation IMPLEMENTATION.
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          FIELDS ( description ) WITH CORRESPONDING #( keys )
-         RESULT DATA(lt_translations).
+         RESULT DATA(translations).
 
-    LOOP AT lt_translations INTO DATA(ls_trans).
-      " Αν το πεδίο περιγραφής είναι τελείως κενό
-      IF ls_trans-description IS INITIAL.
-        APPEND VALUE #( %tky = ls_trans-%tky ) TO failed-translation.
-        APPEND VALUE #( %tky                 = ls_trans-%tky
-                        %element-description = if_abap_behv=>mk-on " Κάνει highlight το πεδίο με κόκκινο
+    LOOP AT translations INTO DATA(translation).
+      IF translation-description IS INITIAL.
+        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+        APPEND VALUE #( %tky                 = translation-%tky
+                        %element-description = if_abap_behv=>mk-on " flag the element so the UI highlights it
                         %msg                 = new_message_with_text(
                                                    severity = if_abap_behv_message=>severity-error
                                                    text     = 'Translation description cannot be empty.' ) )
@@ -72,34 +67,34 @@ CLASS lhc_translation IMPLEMENTATION.
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          ALL FIELDS WITH CORRESPONDING #( keys )
-         RESULT DATA(lt_translations).
+         RESULT DATA(translations).
 
-    DATA lt_create TYPE TABLE FOR CREATE zi_form_trans.
+    DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
 
-    LOOP AT lt_translations INTO DATA(ls_trans).
-      DATA(lv_new_langu) = keys[ %tky = ls_trans-%tky ]-%param-TargetLanguage.
+    LOOP AT translations INTO DATA(translation).
+      DATA(target_language) = keys[ %tky = translation-%tky ]-%param-TargetLanguage.
 
-      IF lv_new_langu IS NOT INITIAL.
-        APPEND VALUE #( %cid        = keys[ %tky = ls_trans-%tky ]-%cid
-                        formname    = ls_trans-formname
-                        fieldname   = ls_trans-fieldname
-                        languagekey = lv_new_langu
-                        description = ls_trans-description
-                        maxlength   = ls_trans-maxlength
+      IF target_language IS NOT INITIAL.
+        APPEND VALUE #( %cid        = keys[ %tky = translation-%tky ]-%cid
+                        formname    = translation-formname
+                        fieldname   = translation-fieldname
+                        languagekey = target_language
+                        description = translation-description
+                        maxlength   = translation-maxlength
                         %is_draft   = if_abap_behv=>mk-on )
-               TO lt_create.
+               TO new_entries.
       ENDIF.
     ENDLOOP.
 
     MODIFY ENTITIES OF zi_form_trans IN LOCAL MODE
            ENTITY translation
            CREATE FIELDS ( formname fieldname languagekey description maxlength )
-           WITH lt_create
-           MAPPED DATA(lt_mapped_create)
+           WITH new_entries
+           MAPPED DATA(mapped_create)
            FAILED failed
            REPORTED reported.
 
-    mapped-translation = lt_mapped_create-translation.
+    mapped-translation = mapped_create-translation.
   ENDMETHOD.
 
 ENDCLASS.
