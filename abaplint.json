@@ -14,29 +14,6 @@
     "errorNamespace": "."
   },
   "rules": {
-    "exporting": true,
-    "local_class_naming": {
-      "exclude": [],
-      "severity": "Error",
-      "patternKind": "required",
-      "ignoreNames": [],
-      "ignorePatterns": [],
-      "local": "^L.+$",
-      "exception": "^LCX_.+$",
-      "test": "^L.+$"
-    },
-    "method_parameter_names": {
-      "exclude": [],
-      "severity": "Error",
-      "patternKind": "required",
-      "ignoreNames": [],
-      "ignorePatterns": [],
-      "ignoreExceptions": true,
-      "importing": "._.+$",
-      "returning": "._.+$",
-      "changing": "._.+$",
-      "exporting": "._.+$"
-    },
     "object_naming": {
       "exclude": [],
       "severity": "Error",
@@ -62,6 +39,45 @@
       "ssst": "^Z",
       "shlp": "^Z"
     },
+    "local_class_naming": {
+      "exclude": [],
+      "severity": "Error",
+      "patternKind": "required",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "local": "^L.+$",
+      "exception": "^LCX_.+$",
+      "test": "^L.+$"
+    },
+    "method_parameter_names": {
+      "exclude": [],
+      "severity": "Error",
+      "patternKind": "forbidden",
+      "ignoreNames": [],
+      "ignorePatterns": [],
+      "ignoreExceptions": true,
+      "importing": "^I(V|S|T|O|R|P|I)?_.+$",
+      "returning": "^R(V|S|T|O|R|E|P|I)?_.+$",
+      "changing": "^C(V|S|T|O|R|P|I)?_.+$",
+      "exporting": "^E(V|S|T|O|R|P|I)?_.+$"
+    },
+    "local_variable_names": {
+      "exclude": [],
+      "severity": "Error",
+      "patternKind": "forbidden",
+      "ignoreNames": [],
+      "expectedData": "^L(V|T|S|O|R)?_.+$",
+      "expectedConstant": "^(L?C)_.+$",
+      "expectedFS": "^<FS_.+>$|^<L(V|S|T)?_.+>$"
+    },
+    "class_attribute_names": {
+      "exclude": [],
+      "severity": "Error",
+      "patternKind": "forbidden",
+      "ignoreNames": [],
+      "statics": "^[GS](V|T|S|O|R|C)?_.+$",
+      "instance": "^M(V|T|S|O|R|C)?_.+$"
+    },
     "selection_screen_naming": {
       "exclude": [],
       "severity": "Error",
@@ -72,11 +88,44 @@
       "selectOption": "^S_.+$",
       "screenElement": "^SC_.+$"
     },
-    "types_naming": {
-      "exclude": [],
-      "severity": "Error",
-      "pattern": "^T.+$"
+    "prefer_inline": true,
+    "prefer_returning_to_exporting": true,
+    "prefer_xsdbool": true,
+    "prefer_is_not": true,
+    "prefer_raise_exception_new": true,
+    "obsolete_statement": true,
+    "empty_statement": true,
+    "if_in_if": true,
+    "max_one_statement": true,
+    "space_before_colon": true,
+    "whitespace_end": true,
+    "contains_tab": true,
+    "7bit_ascii": true,
+    "pragma_style": true,
+    "exporting": true,
+    "unused_variables": true,
+    "indentation": true,
+    "keyword_case": {
+      "style": "upper"
     },
-    "unused_variables": true
+    "line_length": {
+      "length": 120
+    },
+    "method_length": {
+      "statements": 40
+    },
+    "cyclomatic_complexity": {
+      "max": 10
+    },
+    "sequential_blank": {
+      "lines": 3
+    },
+    "avoid_use": {
+      "define": true,
+      "describe": true,
+      "statics": true,
+      "defaultKey": true,
+      "break": true
+    }
   }
 }
