@@ -76,7 +76,8 @@
       "patternKind": "forbidden",
       "ignoreNames": [],
       "statics": "^[GS](V|T|S|O|R|C)?_.+$",
-      "instance": "^M(V|T|S|O|R|C)?_.+$"
+      "instance": "^M(V|T|S|O|R|C)?_.+$",
+      "constants": "^G?C_.+$"
     },
     "selection_screen_naming": {
       "exclude": [],
@@ -106,6 +107,7 @@
     "unused_variables": true,
     "indentation": true,
     "keyword_case": {
+      "exclude": ["zbp_i_form_trans"],
       "style": "upper"
     },
     "line_length": {
@@ -118,7 +120,7 @@
       "max": 10
     },
     "sequential_blank": {
-      "lines": 3
+      "lines": 4
     },
     "avoid_use": {
       "define": true,
