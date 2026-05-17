@@ -32,10 +32,10 @@
       "ignoreNames": [],
       "ignorePatterns": [],
       "ignoreExceptions": true,
-      "importing": "^I._.+$",
-      "returning": "^R._.+$",
-      "changing": "^C._.+$",
-      "exporting": "^E._.+$"
+      "importing": "._.+$",
+      "returning": "._.+$",
+      "changing": "._.+$",
+      "exporting": "._.+$"
     },
     "object_naming": {
       "exclude": [],
