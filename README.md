@@ -7,7 +7,7 @@
 [![ABAP Version](https://img.shields.io/badge/ABAP-7.54%2B-blue )](https://abaplint.app/stats/greltel/abap-form-translator/statement_compatibility)
 [![Code Statistics](https://img.shields.io/badge/CodeStatistics-abaplint-blue)](https://abaplint.app/stats/greltel/abap-form-translator)
 [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/greltel/abap-form-translator/blob/main/LICENSE)
-![Version](https://img.shields.io/endpoint?url=https://shield.abappm.com/github/greltel/abap-form-translator/src/zcl_form_translation.clas.abap/c_version)
+![Version](https://img.shields.io/endpoint?url=https://shield.abappm.com/github/greltel/abap-form-translator/src/zcl_form_translation.clas.abap/version)
 
 A lightweight, dynamic **runtime translation tool** for SAP forms.
 It decouples text management from form development, allowing functional consultants or users to maintain labels via a simple database table (`SM30`,`Business Configuration`,`RAP Application`), bypassing the complex standard SE63 workflow.
