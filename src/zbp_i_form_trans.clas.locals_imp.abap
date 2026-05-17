@@ -42,9 +42,10 @@ CLASS lhc_translation IMPLEMENTATION.
 
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
 
-        APPEND VALUE #( %tky = translation-%tky
-                        %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                      text     = 'Max Length cannot be negative.' ) )
+        APPEND VALUE #( %tky               = translation-%tky
+                        %element-maxlength = if_abap_behv=>mk-on " flag the element so the UI highlights it
+                        %msg               = new_message_with_text( severity = if_abap_behv_message=>severity-error
+                                                                    text     = 'Max Length cannot be negative.' ) )
                TO reported-translation.
       ENDIF.
 

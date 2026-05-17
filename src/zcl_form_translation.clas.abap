@@ -108,7 +108,7 @@ CLASS zcl_form_translation IMPLEMENTATION.
                                  ELSE cl_abap_context_info=>get_user_language_abap_format( ) ).
 
         ASSIGN buffer[ formname = formname
-                         langu    = language ] TO FIELD-SYMBOL(<cached>).
+                       langu    = language ] TO FIELD-SYMBOL(<cached>).
         IF syst-subrc IS INITIAL AND <cached> IS ASSIGNED.
           result = <cached>-translations.
           RETURN.
@@ -118,23 +118,37 @@ CLASS zcl_form_translation IMPLEMENTATION.
                         langu    = language )
                INTO TABLE buffer ASSIGNING FIELD-SYMBOL(<buffer>).
 
+        " Determine which languages to read: target language, plus the
+        " default language as a per-field fallback when enabled.
+        DATA(use_fallback) = xsdbool(     language        <> default_language
+                                      AND enable_fallback  = abap_true ).
+
         SELECT FROM zabap_form_trans
           FIELDS form, fieldname, langu, descr, length
-          WHERE form  = @formname
-            AND langu = @language
-          INTO TABLE @<buffer>-translations.
+          WHERE form = @formname
+            AND (    langu = @language
+                  OR ( langu = @default_language AND @use_fallback = @abap_true ) )
+          INTO TABLE @DATA(candidates).
 
-        IF     <buffer>-translations IS INITIAL
-           AND language                 <> default_language
-           AND enable_fallback        = abap_true.
+        " Keep one row per field: prefer the target language, fall back
+        " to the default language only for fields not present in it.
+        LOOP AT candidates REFERENCE INTO DATA(candidate).
 
-          SELECT FROM zabap_form_trans
-            FIELDS form, fieldname, langu, descr, length
-            WHERE form  = @formname
-              AND langu = @default_language
-            INTO TABLE @<buffer>-translations.
+          ASSIGN <buffer>-translations[ fieldname = candidate->fieldname ]
+                 TO FIELD-SYMBOL(<existing>).
 
-        ENDIF.
+          IF syst-subrc IS INITIAL AND <existing> IS ASSIGNED.
+            IF     <existing>-langu = default_language
+               AND candidate->langu = language.
+              <existing> = candidate->*.
+            ENDIF.
+            UNASSIGN <existing>.
+            CONTINUE.
+          ENDIF.
+
+          INSERT candidate->* INTO TABLE <buffer>-translations.
+
+        ENDLOOP.
 
         result = <buffer>-translations.
 
