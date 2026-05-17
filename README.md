@@ -30,7 +30,7 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 * **No more SE63:** Forget about the painful standard translation process for forms.
 * **Zero Hardcoding:** Keep your form logic clean. No more `IF sy-langu = 'D'. text = 'Kunde'. ENDIF`.
 * **Hot-Swap Texts:** Change a label description in Production without a Transport Request.
-* **Generic:** Works with **any** ABAP structure or Form interface using RTTI.
+* **Generic:** Works with **any** ABAP flat structure or Form interface using RTTI.
 * **Performance:** Optimized with table buffering to ensure zero impact on print times.
 * **Unit Tested:** Includes built-in ABAP Unit tests.
 * **Fiori Elements App** built entirely with the ABAP RESTful Application Programming Model (RAP) for maintaining form translations
