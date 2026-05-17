@@ -2,15 +2,16 @@
 
 CLASS lcl_test_wrapper DEFINITION INHERITING FROM zcl_form_translation.
   PUBLIC SECTION.
-    DATA mt_mock_data TYPE zcl_form_translation=>tt_zabap_form_transv.
+    DATA mock_data TYPE zcl_form_translation=>translations.
 
   PROTECTED SECTION.
     METHODS get_translations REDEFINITION.
 ENDCLASS.
 
+
 CLASS lcl_test_wrapper IMPLEMENTATION.
   METHOD get_translations.
-    re_translations = mt_mock_data.
+    result = mock_data.
   ENDMETHOD.
 ENDCLASS.
 
@@ -20,7 +21,7 @@ CLASS ltc_translator_test DEFINITION FOR TESTING
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-    DATA: mo_cut TYPE REF TO lcl_test_wrapper.
+    DATA: cut TYPE REF TO lcl_test_wrapper.
 
     METHODS:
       setup,
@@ -31,7 +32,7 @@ ENDCLASS.
 CLASS ltc_translator_test IMPLEMENTATION.
 
   METHOD setup.
-    mo_cut = NEW lcl_test_wrapper( ).
+    cut = NEW lcl_test_wrapper( ).
   ENDMETHOD.
 
   METHOD test_translation_success.
@@ -43,10 +44,10 @@ CLASS ltc_translator_test IMPLEMENTATION.
 
     ls_data-lbl_name = 'Original'.
 
-    mo_cut->mt_mock_data = VALUE #(
+    cut->mock_data = VALUE #(
       ( form = 'ZTEST' fieldname = 'LBL_NAME' langu = 'E' descr = 'Success!' ) ).
 
-    mo_cut->translate_form( EXPORTING formname = 'ZTEST'
+    cut->translate_form( EXPORTING formname = 'ZTEST'
                             CHANGING  form_elements = ls_data ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'Success!' act = ls_data-lbl_name ).
@@ -54,7 +55,6 @@ CLASS ltc_translator_test IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD test_translation_length.
-
     TYPES: BEGIN OF ty_dummy,
              lbl_name TYPE string,
            END OF ty_dummy.
@@ -62,14 +62,13 @@ CLASS ltc_translator_test IMPLEMENTATION.
 
     ls_data-lbl_name = 'Original'.
 
-    mo_cut->mt_mock_data = VALUE #(
-      ( form = 'ZTEST' fieldname = 'LBL_NAME' langu = 'E' descr = 'Success!' length = 3 ) ).
+    cut->mock_data = VALUE #( ( form = 'ZTEST' fieldname = 'LBL_NAME' langu = 'E' descr = 'Success!' length = 3 ) ).
 
-    mo_cut->translate_form( EXPORTING formname = 'ZTEST'
+    cut->translate_form( EXPORTING formname      = 'ZTEST'
                             CHANGING  form_elements = ls_data ).
 
-    cl_abap_unit_assert=>assert_equals( exp = 'Suc' act = ls_data-lbl_name ).
-
+    cl_abap_unit_assert=>assert_equals( exp = 'Suc'
+                                        act = ls_data-lbl_name ).
   ENDMETHOD.
 
 ENDCLASS.
