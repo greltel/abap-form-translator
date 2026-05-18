@@ -23,7 +23,13 @@ annotate view ZC_FORM_TRANS with
                  type: #FIELDGROUP_REFERENCE,
                  targetQualifier: 'TransGrp',
                  label: 'Translation Data',
-                 position: 20 } ]
+                 position: 20 },
+               { id: 'AdminData',
+                 purpose: #STANDARD,
+                 type: #FIELDGROUP_REFERENCE,
+                 targetQualifier: 'AdminGrp',
+                 label: 'Administrative Data',
+                 position: 30 } ]
   @UI.fieldGroup: [ { qualifier: 'TechGrp', position: 10 } ]
   @UI.lineItem: [ { position: 10 } ]
   @UI.selectionField: [ { position: 10 } ]
@@ -51,16 +57,16 @@ annotate view ZC_FORM_TRANS with
   @UI.lineItem: [ { position: 50 } ]
   MaxLength;
 
-  @UI.hidden: true
+  @UI.fieldGroup: [ { qualifier: 'AdminGrp', position: 10 } ]
   CreatedBy;
 
-  @UI.hidden: true
+  @UI.fieldGroup: [ { qualifier: 'AdminGrp', position: 20 } ]
   CreatedAt;
 
-  @UI.hidden: true
+  @UI.fieldGroup: [ { qualifier: 'AdminGrp', position: 30 } ]
   LastChangedBy;
 
-  @UI.hidden: true
+  @UI.fieldGroup: [ { qualifier: 'AdminGrp', position: 40 } ]
   LastChangedAt;
 
   @UI.hidden: true

@@ -1,6 +1,8 @@
 CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
 
+    CONSTANTS message_class TYPE symsgid VALUE 'ZABAP_FORM_TRANS_MSG'.
+
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       IMPORTING keys REQUEST requested_authorizations FOR translation RESULT result.
 
@@ -18,16 +20,17 @@ ENDCLASS.
 
 CLASS lhc_translation IMPLEMENTATION.
   METHOD get_instance_authorizations.
-    " Allow all: every requested instance operation is granted.
-    " Access is governed by Fiori catalog / service binding roles, not per-instance.
+
     result = VALUE #( FOR key IN keys
-                      ( %tky        = key-%tky
-                        %update      = COND #( WHEN requested_authorizations-%update = if_abap_behv=>mk-on
-                                               THEN if_abap_behv=>auth-allowed )
-                        %action-Edit = COND #( WHEN requested_authorizations-%action-Edit = if_abap_behv=>mk-on
-                                               THEN if_abap_behv=>auth-allowed )
-                        %delete      = COND #( WHEN requested_authorizations-%delete = if_abap_behv=>mk-on
-                                               THEN if_abap_behv=>auth-allowed ) ) ).
+                      ( %tky                   = key-%tky
+                        %update                = COND #( WHEN requested_authorizations-%update = if_abap_behv=>mk-on
+                                                         THEN if_abap_behv=>auth-allowed )
+                        %action-Edit           = COND #( WHEN requested_authorizations-%action-Edit = if_abap_behv=>mk-on
+                                                         THEN if_abap_behv=>auth-allowed )
+                        %action-copyToLanguage = COND #( WHEN requested_authorizations-%action-copyToLanguage = if_abap_behv=>mk-on
+                                                         THEN if_abap_behv=>auth-allowed )
+                        %delete                = COND #( WHEN requested_authorizations-%delete = if_abap_behv=>mk-on
+                                                         THEN if_abap_behv=>auth-allowed ) ) ).
   ENDMETHOD.
 
   METHOD validatemaxlength.
@@ -43,9 +46,10 @@ CLASS lhc_translation IMPLEMENTATION.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
 
         APPEND VALUE #( %tky               = translation-%tky
-                        %element-maxlength = if_abap_behv=>mk-on " flag the element so the UI highlights it
-                        %msg               = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                                    text     = 'Max Length cannot be negative.' ) )
+                        %element-maxlength = if_abap_behv=>mk-on
+                        %msg               = new_message( id       = message_class
+                                                          number   = '001'
+                                                          severity = if_abap_behv_message=>severity-error ) )
                TO reported-translation.
       ENDIF.
 
@@ -62,24 +66,27 @@ CLASS lhc_translation IMPLEMENTATION.
     LOOP AT translations INTO DATA(translation).
       IF translation-description IS INITIAL.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+
+        " Fix #4: translatable message from the message class.
         APPEND VALUE #( %tky                 = translation-%tky
-                        %element-description = if_abap_behv=>mk-on " flag the element so the UI highlights it
-                        %msg                 = new_message_with_text(
-                                                   severity = if_abap_behv_message=>severity-error
-                                                   text     = 'Translation description cannot be empty.' ) )
+                        %element-description = if_abap_behv=>mk-on
+                        %msg                 = new_message( id       = message_class
+                                                            number   = '002'
+                                                            severity = if_abap_behv_message=>severity-error ) )
                TO reported-translation.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
 
   METHOD copytolanguage.
+
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          ALL FIELDS WITH CORRESPONDING #( keys )
          RESULT DATA(translations).
 
-    " Collect the prospective target keys so duplicates are detected before CREATE
-    DATA target_keys TYPE TABLE FOR READ IMPORT zi_form_trans.
+    DATA active_keys TYPE TABLE FOR READ IMPORT zi_form_trans.
+    DATA draft_keys  TYPE TABLE FOR READ IMPORT zi_form_trans.
 
     LOOP AT translations INTO DATA(source).
       DATA(requested_language) = keys[ %tky = source-%tky ]-%param-TargetLanguage.
@@ -88,37 +95,51 @@ CLASS lhc_translation IMPLEMENTATION.
       ENDIF.
       APPEND VALUE #( %key-FormName    = source-formname
                       %key-FieldName   = source-fieldname
-                      %key-LanguageKey = requested_language ) TO target_keys.
+                      %key-LanguageKey = requested_language
+                      %is_draft        = if_abap_behv=>mk-off ) TO active_keys.
+      APPEND VALUE #( %key-FormName    = source-formname
+                      %key-FieldName   = source-fieldname
+                      %key-LanguageKey = requested_language
+                      %is_draft        = if_abap_behv=>mk-on  ) TO draft_keys.
     ENDLOOP.
 
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
-         ALL FIELDS WITH target_keys
-         RESULT DATA(existing).
+         ALL FIELDS WITH active_keys
+         RESULT DATA(existing_active).
+
+    READ ENTITIES OF zi_form_trans IN LOCAL MODE
+         ENTITY translation
+         ALL FIELDS WITH draft_keys
+         RESULT DATA(existing_draft).
+
+    DATA(existing) = existing_active.
+    APPEND LINES OF existing_draft TO existing.
 
     DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
 
     LOOP AT translations INTO DATA(translation).
       DATA(target_language) = keys[ %tky = translation-%tky ]-%param-TargetLanguage.
 
-IF target_language IS INITIAL.
-  APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
-  APPEND VALUE #( %tky = translation-%tky
-                  %msg = new_message_with_text(
-                                                text     = |Translation language cannot be Initial.|
-                                                severity = if_abap_behv_message=>severity-error ) )
-         TO reported-translation.
-  CONTINUE.
-ENDIF.
+      IF target_language IS INITIAL.
+        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+        APPEND VALUE #( %tky = translation-%tky
+                        %msg = new_message( id       = message_class
+                                            number   = '004'
+                                            severity = if_abap_behv_message=>severity-error ) )
+               TO reported-translation.
+        CONTINUE.
+      ENDIF.
 
       IF line_exists( existing[ formname    = translation-formname
                                 fieldname   = translation-fieldname
                                 languagekey = target_language ] ).
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
         APPEND VALUE #( %tky = translation-%tky
-                        %msg = new_message_with_text(
-                                   severity = if_abap_behv_message=>severity-error
-                                   text     = |Translation already exists for language { target_language }.| ) )
+                        %msg = new_message( id       = message_class
+                                            number   = '003'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = target_language ) )
                TO reported-translation.
         CONTINUE.
       ENDIF.

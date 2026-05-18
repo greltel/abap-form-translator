@@ -14,6 +14,7 @@ define root view entity ZC_FORM_TRANS
       @Consumption.valueHelpDefinition: [ { entity: { name: 'ZI_FORM_NAME_VH', element: 'FormName' } } ]
       @Search.defaultSearchElement: true
       @Search.fuzzinessThreshold: 0.8
+      @EndUserText.quickInfo: 'Existing forms are suggested; a new form name can be typed freely.'
   key FormName,
 
       @Consumption.valueHelpDefinition: [ { entity: { name: 'ZI_FIELD_NAME_VH', element: 'FieldName' },
@@ -22,6 +23,7 @@ define root view entity ZC_FORM_TRANS
                                                                    usage: #FILTER_AND_RESULT } ] } ]
       @Search.defaultSearchElement: true
       @Search.fuzzinessThreshold: 0.8
+      @EndUserText.quickInfo: 'Existing fields are suggested; a new field name can be typed.'
   key FieldName,
 
       @Consumption.valueHelpDefinition: [ { entity: { name: 'I_Language', element: 'Language' } } ]
