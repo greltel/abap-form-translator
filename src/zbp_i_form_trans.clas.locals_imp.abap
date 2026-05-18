@@ -20,17 +20,17 @@ ENDCLASS.
 
 CLASS lhc_translation IMPLEMENTATION.
   METHOD get_instance_authorizations.
-
-    result = VALUE #( FOR key IN keys
-                      ( %tky                   = key-%tky
-                        %update                = COND #( WHEN requested_authorizations-%update = if_abap_behv=>mk-on
-                                                         THEN if_abap_behv=>auth-allowed )
-                        %action-Edit           = COND #( WHEN requested_authorizations-%action-Edit = if_abap_behv=>mk-on
-                                                         THEN if_abap_behv=>auth-allowed )
-                        %action-copyToLanguage = COND #( WHEN requested_authorizations-%action-copyToLanguage = if_abap_behv=>mk-on
-                                                         THEN if_abap_behv=>auth-allowed )
-                        %delete                = COND #( WHEN requested_authorizations-%delete = if_abap_behv=>mk-on
-                                                         THEN if_abap_behv=>auth-allowed ) ) ).
+    result = VALUE #(
+        FOR key IN keys
+        ( %tky                   = key-%tky
+          %update                = COND #( WHEN requested_authorizations-%update = if_abap_behv=>mk-on
+                                           THEN if_abap_behv=>auth-allowed )
+          %action-Edit           = COND #( WHEN requested_authorizations-%action-Edit = if_abap_behv=>mk-on
+                                           THEN if_abap_behv=>auth-allowed )
+          %action-copyToLanguage = COND #( WHEN requested_authorizations-%action-copyToLanguage = if_abap_behv=>mk-on
+                                           THEN if_abap_behv=>auth-allowed )
+          %delete                = COND #( WHEN requested_authorizations-%delete = if_abap_behv=>mk-on
+                                           THEN if_abap_behv=>auth-allowed ) ) ).
   ENDMETHOD.
 
   METHOD validatemaxlength.
