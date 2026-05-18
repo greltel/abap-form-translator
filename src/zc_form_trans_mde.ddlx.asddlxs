@@ -2,7 +2,8 @@
 
 @UI.headerInfo: { typeName: 'Translation',
                   typeNamePlural: 'Translations',
-                  title: { type: #STANDARD, value: 'FormName' } }
+                  title: { type: #STANDARD, value: 'FormName' },
+                  description: { type: #STANDARD, value: 'FieldName' } }
 
 @UI.presentationVariant: [ { sortOrder: [ { by: 'FormName',  direction: #ASC },
                                           { by: 'FieldName', direction: #ASC } ],
@@ -11,7 +12,6 @@
 annotate view ZC_FORM_TRANS with
 
 {
-
   @UI.facet: [ { id: 'Technical',
                  purpose: #STANDARD,
                  type: #FIELDGROUP_REFERENCE,
@@ -39,6 +39,7 @@ annotate view ZC_FORM_TRANS with
   @UI.lineItem: [ { position: 30 },
                   { type: #FOR_ACTION, dataAction: 'copyToLanguage', label: 'Copy Language' } ]
   @UI.selectionField: [ { position: 30 } ]
+  @UI.textArrangement: #TEXT_FIRST
   LanguageKey;
 
   @UI.fieldGroup: [ { qualifier: 'TransGrp', position: 10 } ]

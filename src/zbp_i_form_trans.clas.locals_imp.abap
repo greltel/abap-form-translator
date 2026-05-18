@@ -73,7 +73,6 @@ CLASS lhc_translation IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD copytolanguage.
-
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          ALL FIELDS WITH CORRESPONDING #( keys )
@@ -102,9 +101,15 @@ CLASS lhc_translation IMPLEMENTATION.
     LOOP AT translations INTO DATA(translation).
       DATA(target_language) = keys[ %tky = translation-%tky ]-%param-TargetLanguage.
 
-      IF target_language IS INITIAL.
-        CONTINUE.
-      ENDIF.
+IF target_language IS INITIAL.
+  APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+  APPEND VALUE #( %tky = translation-%tky
+                  %msg = new_message_with_text(
+                                                text     = |Translation language cannot be Initial.|
+                                                severity = if_abap_behv_message=>severity-error ) )
+         TO reported-translation.
+  CONTINUE.
+ENDIF.
 
       IF line_exists( existing[ formname    = translation-formname
                                 fieldname   = translation-fieldname
@@ -133,10 +138,14 @@ CLASS lhc_translation IMPLEMENTATION.
            CREATE FIELDS ( formname fieldname languagekey description maxlength )
            WITH new_entries
            MAPPED DATA(mapped_create)
-           FAILED failed
-           REPORTED reported.
+           FAILED DATA(failed_create)
+           REPORTED DATA(reported_create).
 
-    mapped-translation = mapped_create-translation.
+    mapped-translation   = mapped_create-translation.
+    failed-translation   = VALUE #( BASE failed-translation
+                                    ( LINES OF failed_create-translation ) ).
+    reported-translation = VALUE #( BASE reported-translation
+                                    ( LINES OF reported_create-translation ) ).
   ENDMETHOD.
 
 ENDCLASS.

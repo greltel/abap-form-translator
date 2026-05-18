@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>Form Translation Message Class</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>negative max length</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>empty description</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>duplicate &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>target language required</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>
