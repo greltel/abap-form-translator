@@ -52,22 +52,20 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 3.  Call the translator **before** calling the form Function Module(for smartforms).
 
 ```abap
-DATA: BEGIN OF gs_labels,
+DATA: BEGIN OF labels,
         title        TYPE string,
         footer_note  TYPE string,
         customer_lbl TYPE string,
-      END OF gs_labels.
+      END OF labels.
 
 " 1.Initialize (Optional defaults)
-gs_labels-title = 'Invoice'.
+labels-title = 'Invoice'.
 
 " 2.Translate dynamically based on Language and DB Configuration
 NEW zcl_form_translation( )->translate_form(
-  EXPORTING
-    formname      = 'ZINVOICE_FORM'   " Key in ZABAP_FORM_TRANS
-    langu         = p_langu           " e.g., NAST-SPRAS
-  CHANGING
-    form_elements = gs_labels ).         " The structure to be translated
+      EXPORTING formname      = 'ZINVOICE_FORM'   " Key in ZABAP_FORM_TRANS
+                langu         = cl_abap_context_info=>get_user_language_abap_format( )         " e.g., NAST-SPRAS
+      CHANGING  form_elements = labels ).         " The structure to be translated
 
-" 3. The gs_labels structure now contains the translated texts from ZDB_FORM_TRANS
+" 3. The labels structure now contains the translated texts from ZDB_FORM_TRANS
 "    Pass this structure to your Smartform / Adobe Form interface.
