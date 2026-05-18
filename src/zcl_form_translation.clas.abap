@@ -34,22 +34,24 @@ CLASS zcl_form_translation DEFINITION
              length    TYPE zabap_form_trans-length,
            END OF translation.
 
-    TYPES translations TYPE STANDARD TABLE OF translation WITH EMPTY KEY.
+    TYPES translations TYPE STANDARD TABLE OF translation WITH EMPTY KEY
+                   WITH NON-UNIQUE SORTED KEY by_field COMPONENTS fieldname.
 
     TYPES: BEGIN OF buffer_entry,
              formname     TYPE zabap_form_trans_name,
              langu        TYPE zabap_form_trans_langu,
+             use_fallback TYPE abap_boolean,
              translations TYPE translations,
            END OF buffer_entry.
 
     CLASS-DATA buffer TYPE HASHED TABLE OF buffer_entry
-                      WITH UNIQUE KEY formname langu.
+                      WITH UNIQUE KEY formname langu use_fallback.
 
     METHODS get_translations
-      IMPORTING formname               TYPE zabap_form_trans_name
-                langu                  TYPE zabap_form_trans_langu
-                enable_fallback        TYPE abap_boolean DEFAULT abap_true
-      RETURNING VALUE(result)          TYPE zcl_form_translation=>translations.
+      IMPORTING formname        TYPE zabap_form_trans_name
+                langu           TYPE zabap_form_trans_langu
+                enable_fallback TYPE abap_boolean DEFAULT abap_true
+      RETURNING VALUE(result)   TYPE zcl_form_translation=>translations.
 
   PRIVATE SECTION.
 ENDCLASS.
@@ -72,6 +74,10 @@ CLASS zcl_form_translation IMPLEMENTATION.
 
     LOOP AT translations REFERENCE INTO DATA(translation).
 
+      IF translation->*-descr IS INITIAL.
+        CONTINUE.
+      ENDIF.
+
       ASSIGN COMPONENT translation->*-fieldname OF STRUCTURE form_elements TO FIELD-SYMBOL(<field_value>).
 
       IF NOT ( syst-subrc IS INITIAL AND <field_value> IS ASSIGNED ).
@@ -91,7 +97,7 @@ CLASS zcl_form_translation IMPLEMENTATION.
           <field_value> = text.
 
         CATCH cx_root.
-          CONTINUE.
+
       ENDTRY.
 
       CLEAR text.
@@ -107,21 +113,16 @@ CLASS zcl_form_translation IMPLEMENTATION.
                                  THEN langu
                                  ELSE cl_abap_context_info=>get_user_language_abap_format( ) ).
 
-        ASSIGN buffer[ formname = formname
-                       langu    = language ] TO FIELD-SYMBOL(<cached>).
+        DATA(use_fallback) = xsdbool(     language        <> default_language
+                                      AND enable_fallback  = abap_true ).
+
+        ASSIGN buffer[ formname     = formname
+                       langu        = language
+                       use_fallback = use_fallback ] TO FIELD-SYMBOL(<cached>).
         IF syst-subrc IS INITIAL AND <cached> IS ASSIGNED.
           result = <cached>-translations.
           RETURN.
         ENDIF.
-
-        INSERT VALUE #( formname = formname
-                        langu    = language )
-               INTO TABLE buffer ASSIGNING FIELD-SYMBOL(<buffer>).
-
-        " Determine which languages to read: target language, plus the
-        " default language as a per-field fallback when enabled.
-        DATA(use_fallback) = xsdbool(     language        <> default_language
-                                      AND enable_fallback  = abap_true ).
 
         SELECT FROM zabap_form_trans
           FIELDS form, fieldname, langu, descr, length
@@ -130,12 +131,10 @@ CLASS zcl_form_translation IMPLEMENTATION.
                   OR ( langu = @default_language AND @use_fallback = @abap_true ) )
           INTO TABLE @DATA(candidates).
 
-        " Keep one row per field: prefer the target language, fall back
-        " to the default language only for fields not present in it.
         LOOP AT candidates REFERENCE INTO DATA(candidate).
 
-          ASSIGN <buffer>-translations[ fieldname = candidate->fieldname ]
-                 TO FIELD-SYMBOL(<existing>).
+          ASSIGN result[ KEY by_field
+                         fieldname = candidate->fieldname ] TO FIELD-SYMBOL(<existing>).
 
           IF syst-subrc IS INITIAL AND <existing> IS ASSIGNED.
             IF     <existing>-langu = default_language
@@ -146,11 +145,16 @@ CLASS zcl_form_translation IMPLEMENTATION.
             CONTINUE.
           ENDIF.
 
-          INSERT candidate->* INTO TABLE <buffer>-translations.
+          INSERT candidate->* INTO TABLE result.
 
         ENDLOOP.
 
-        result = <buffer>-translations.
+        IF result IS NOT INITIAL.
+          INSERT VALUE #( formname     = formname
+                          langu        = language
+                          use_fallback = use_fallback
+                          translations = result ) INTO TABLE buffer.
+        ENDIF.
 
       CATCH cx_abap_context_info_error.
     ENDTRY.
