@@ -12,6 +12,9 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS validatedescription FOR VALIDATE ON SAVE
       IMPORTING keys FOR translation~validatedescription.
 
+    METHODS validateuniquekey FOR VALIDATE ON SAVE
+      IMPORTING keys FOR translation~validateuniquekey.
+
     METHODS copytolanguage FOR MODIFY
       IMPORTING keys FOR ACTION translation~copytolanguage.
 
@@ -36,11 +39,13 @@ CLASS lhc_translation IMPLEMENTATION.
   METHOD validatemaxlength.
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
-         FIELDS ( maxlength ) WITH CORRESPONDING #( keys )
+         FIELDS ( maxlength description ) WITH CORRESPONDING #( keys )
          RESULT DATA(translations).
 
     LOOP AT translations INTO DATA(translation).
 
+      " MaxLength = 0 is a valid value and means "no length limit"
+      " (see ZCL_FORM_TRANSLATION, which only truncates when length > 0).
       IF translation-maxlength < 0.
 
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
@@ -50,6 +55,23 @@ CLASS lhc_translation IMPLEMENTATION.
                         %msg               = new_message( id       = message_class
                                                           number   = '001'
                                                           severity = if_abap_behv_message=>severity-error ) )
+               TO reported-translation.
+
+        CONTINUE.
+      ENDIF.
+
+      " Non-blocking warning: at print time the description is truncated to
+      " MaxLength, so warn the maintainer that text will be cut off.
+      IF     translation-maxlength           > 0
+         AND strlen( translation-description ) > translation-maxlength.
+
+        APPEND VALUE #( %tky                 = translation-%tky
+                        %element-description = if_abap_behv=>mk-on
+                        %element-maxlength   = if_abap_behv=>mk-on
+                        %msg                 = new_message( id       = message_class
+                                                            number   = '006'
+                                                            severity = if_abap_behv_message=>severity-warning
+                                                            v1       = |{ translation-maxlength }| ) )
                TO reported-translation.
       ENDIF.
 
@@ -75,6 +97,38 @@ CLASS lhc_translation IMPLEMENTATION.
                                                             severity = if_abap_behv_message=>severity-error ) )
                TO reported-translation.
       ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD validateuniquekey.
+
+    READ ENTITIES OF zi_form_trans IN LOCAL MODE
+         ENTITY translation
+         FIELDS ( formname fieldname languagekey ) WITH CORRESPONDING #( keys )
+         RESULT DATA(translations).
+
+    LOOP AT translations INTO DATA(translation).
+
+      " A newly created row must not clash with an already active translation
+      " for the same Form / Field / Language. Report a friendly duplicate
+      " message instead of letting the framework raise a generic save error.
+      SELECT SINGLE @abap_true FROM zabap_form_trans
+        WHERE form      = @translation-formname
+          AND fieldname = @translation-fieldname
+          AND langu     = @translation-languagekey
+        INTO @DATA(exists).
+
+      IF exists = abap_true.
+        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+
+        APPEND VALUE #( %tky = translation-%tky
+                        %msg = new_message( id       = message_class
+                                            number   = '003'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = translation-languagekey ) )
+               TO reported-translation.
+      ENDIF.
+
     ENDLOOP.
   ENDMETHOD.
 
@@ -131,9 +185,27 @@ CLASS lhc_translation IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
-      IF line_exists( existing[ formname    = translation-formname
-                                fieldname   = translation-fieldname
-                                languagekey = target_language ] ).
+      IF target_language = translation-languagekey.
+        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+        APPEND VALUE #( %tky = translation-%tky
+                        %msg = new_message( id       = message_class
+                                            number   = '005'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = target_language ) )
+               TO reported-translation.
+        CONTINUE.
+      ENDIF.
+
+      " Reject duplicates against already persisted rows (active or draft) as
+      " well as rows already queued in this same batch - two source rows sharing
+      " Form/Field copied to the same target language would otherwise collide on
+      " the primary key in the CREATE below.
+      IF    line_exists( existing[ formname    = translation-formname
+                                   fieldname   = translation-fieldname
+                                   languagekey = target_language ] )
+         OR line_exists( new_entries[ formname    = translation-formname
+                                      fieldname   = translation-fieldname
+                                      languagekey = target_language ] ).
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
         APPEND VALUE #( %tky = translation-%tky
                         %msg = new_message( id       = message_class

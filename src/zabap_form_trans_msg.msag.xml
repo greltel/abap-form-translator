@@ -12,25 +12,37 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
      <MSGNR>001</MSGNR>
-     <TEXT>negative max length</TEXT>
+     <TEXT>Maximum length must not be negative</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
      <MSGNR>002</MSGNR>
-     <TEXT>empty description</TEXT>
+     <TEXT>Please enter a description</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
      <MSGNR>003</MSGNR>
-     <TEXT>duplicate &amp;1</TEXT>
+     <TEXT>A translation for language &amp;1 already exists</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
      <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
      <MSGNR>004</MSGNR>
-     <TEXT>target language required</TEXT>
+     <TEXT>Please specify a target language</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>Cannot copy a translation to its own language &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>Description is longer than the maximum length &amp;1 and will be truncated</TEXT>
     </T100>
    </T100>
   </asx:values>

@@ -13,11 +13,11 @@ A lightweight, dynamic **runtime translation tool** for SAP forms.
 It decouples text management from form development, allowing functional consultants or users to maintain labels via a simple database table (`SM30`,`Business Configuration`,`RAP Application`), bypassing the complex standard SE63 workflow.
 
 # Table of contents
-1. [License](#License)
-2. [Contributors-Developers](#Contributors-Developers)
-3. [Key Benefits](#Key-Benefits)
-4. [Design Goals-Features](#Design-Goals-Features)
-5. [Usage](#Usage)
+1. [License](#license)
+2. [Contributors-Developers](#contributors-developers)
+3. [Key Benefits](#key-benefits)
+4. [Design Goals-Features](#design-goals-features)
+5. [Usage](#usage)
 
 ## License
 This project is licensed under the [MIT License](https://github.com/greltel/abap-form-translator/blob/main/LICENSE).
@@ -67,5 +67,38 @@ NEW zcl_form_translation( )->translate_form(
                 langu         = cl_abap_context_info=>get_user_language_abap_format( )         " e.g., NAST-SPRAS
       CHANGING  form_elements = labels ).         " The structure to be translated
 
-" 3. The labels structure now contains the translated texts from ZDB_FORM_TRANS
+" 3. The labels structure now contains the translated texts from ZABAP_FORM_TRANS
 "    Pass this structure to your Smartform / Adobe Form interface.
+```
+
+### API reference
+
+`translate_form` maps the fields of `ZABAP_FORM_TRANS` onto the components of your
+structure by field name (via RTTI). Signature:
+
+| Parameter | Direction | Type | Default | Meaning |
+|---|---|---|---|---|
+| `formname` | importing | `zabap_form_trans_name` | – | Key in `ZABAP_FORM_TRANS`. An empty value returns without changes. |
+| `langu` | importing | `zabap_form_trans_langu` | logon language | Target language. If empty, the current user language is used. |
+| `enable_fallback` | importing | `abap_boolean` | `abap_true` | When on, fields that have no text in the target language fall back to the default language (`E`). |
+| `form_elements` | changing | `any` | – | Flat structure whose components are filled with the translated texts. |
+
+`clear_buffer` (static) invalidates the in-memory translation buffer. Call it after
+maintaining translations inside a long-living session (mass print / batch / job
+server) so hot-swapped texts take effect immediately.
+
+> Note: only **flat** structures are supported. Nested structures and internal
+> tables are not translated.
+
+### Database table `ZABAP_FORM_TRANS`
+
+Maintain the texts (via `SM30`, Business Configuration, or the RAP/Fiori app) in
+this table:
+
+| Field | Type | Key | Description |
+|---|---|---|---|
+| `FORM` | `ZABAP_FORM_TRANS_NAME` (CHAR 30) | ✔ | Form key passed as `formname`. |
+| `FIELDNAME` | `ZABAP_FORM_TRANS_FIELD` (CHAR 30) | ✔ | Component name in your structure. |
+| `LANGU` | `ZABAP_FORM_TRANS_LANGU` (LANG) | ✔ | Language of the text. |
+| `DESCR` | `ZABAP_FORM_TRANS_DESCR` (CHAR 50) | | Translated text. |
+| `LENGTH` | `INT2` | | Max length; text longer than this is truncated at print time. `0` = no limit. |
