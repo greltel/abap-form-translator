@@ -28,11 +28,14 @@ etag master LocalLastChangedAt
   {
     validation validateMaxLength;
     validation validateDescription;
+    validation validateUniqueKey;
   }
 
-  validation validateMaxLength on save { field MaxLength; create; update; }
+  validation validateMaxLength on save { field MaxLength, Description; create; update; }
 
   validation validateDescription on save { field Description; create; update; }
+
+  validation validateUniqueKey on save { field FormName, FieldName, LanguageKey; create; }
 
   mapping for zabap_form_trans
     {

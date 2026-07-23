@@ -107,57 +107,62 @@ CLASS zcl_form_translation IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_translations.
+
+    DATA language TYPE spras.
+
     TRY.
-
-        DATA(language) = COND #( WHEN langu IS NOT INITIAL
-                                 THEN langu
-                                 ELSE cl_abap_context_info=>get_user_language_abap_format( ) ).
-
-        DATA(use_fallback) = xsdbool(     language        <> default_language
-                                      AND enable_fallback  = abap_true ).
-
-        ASSIGN buffer[ formname     = formname
-                       langu        = language
-                       use_fallback = use_fallback ] TO FIELD-SYMBOL(<cached>).
-        IF syst-subrc IS INITIAL AND <cached> IS ASSIGNED.
-          result = <cached>-translations.
-          RETURN.
-        ENDIF.
-
-        SELECT FROM zabap_form_trans
-          FIELDS form, fieldname, langu, descr, length
-          WHERE form = @formname
-            AND (    langu = @language
-                  OR ( langu = @default_language AND @use_fallback = @abap_true ) )
-          INTO TABLE @DATA(candidates).
-
-        LOOP AT candidates REFERENCE INTO DATA(candidate).
-
-          ASSIGN result[ KEY by_field
-                         fieldname = candidate->fieldname ] TO FIELD-SYMBOL(<existing>).
-
-          IF syst-subrc IS INITIAL AND <existing> IS ASSIGNED.
-            IF     <existing>-langu = default_language
-               AND candidate->langu = language.
-              <existing> = candidate->*.
-            ENDIF.
-            UNASSIGN <existing>.
-            CONTINUE.
-          ENDIF.
-
-          INSERT candidate->* INTO TABLE result.
-
-        ENDLOOP.
-
-        IF result IS NOT INITIAL.
-          INSERT VALUE #( formname     = formname
-                          langu        = language
-                          use_fallback = use_fallback
-                          translations = result ) INTO TABLE buffer.
-        ENDIF.
-
+        language = COND #( WHEN langu IS NOT INITIAL
+                           THEN langu
+                           ELSE cl_abap_context_info=>get_user_language_abap_format( ) ).
       CATCH cx_abap_context_info_error.
+        " If the user language cannot be resolved, fall back to the default
+        " language instead of silently returning no translations at all.
+        language = default_language.
     ENDTRY.
+
+    DATA(use_fallback) = xsdbool(     language        <> default_language
+                                  AND enable_fallback  = abap_true ).
+
+    ASSIGN buffer[ formname     = formname
+                   langu        = language
+                   use_fallback = use_fallback ] TO FIELD-SYMBOL(<cached>).
+    IF syst-subrc IS INITIAL AND <cached> IS ASSIGNED.
+      result = <cached>-translations.
+      RETURN.
+    ENDIF.
+
+    SELECT FROM zabap_form_trans
+      FIELDS form, fieldname, langu, descr, length
+      WHERE form = @formname
+        AND (    langu = @language
+              OR ( langu = @default_language AND @use_fallback = @abap_true ) )
+      INTO TABLE @DATA(candidates).
+
+    LOOP AT candidates REFERENCE INTO DATA(candidate).
+
+      ASSIGN result[ KEY by_field
+                     fieldname = candidate->fieldname ] TO FIELD-SYMBOL(<existing>).
+
+      IF syst-subrc IS INITIAL AND <existing> IS ASSIGNED.
+        IF     <existing>-langu = default_language
+           AND candidate->langu = language.
+          <existing> = candidate->*.
+        ENDIF.
+        UNASSIGN <existing>.
+        CONTINUE.
+      ENDIF.
+
+      INSERT candidate->* INTO TABLE result.
+
+    ENDLOOP.
+
+    " Cache the outcome - including the empty case - so that repeated calls
+    " for forms without translations do not re-run the SELECT (negative caching).
+    INSERT VALUE #( formname     = formname
+                    langu        = language
+                    use_fallback = use_fallback
+                    translations = result ) INTO TABLE buffer.
+
   ENDMETHOD.
 
   METHOD clear_buffer.
