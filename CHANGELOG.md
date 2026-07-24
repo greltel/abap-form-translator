@@ -5,6 +5,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Data model / DDIC
+- Added domain `ZABAP_FORM_MAXLENGTH` (INT2, range 0–9999) and data element
+  `ZABAP_FORM_TRANS_MAXLEN`; the `LENGTH`/`MAXLENGTH` columns now use it instead of
+  raw `INT2`, enforcing a non-negative range declaratively.
+- Fixed the draft table `ZABAP_FORM_DRFT`: removed the incorrect `LANGDEP` flag and
+  set `UEBERSETZ = N` (draft tables must be neither language-dependent nor
+  translation-relevant).
+- Added `@Semantics.language: true` to `LanguageKey` so the framework treats it as
+  the row's language column (ISO conversion, language filtering, text association).
+- Normalised data-element labels: consistent casing ("Field Name"), a proper
+  `Description` heading, and corrected screen/heading lengths.
+
+### RAP behavior
+- Added instance feature control: `copyToLanguage` is disabled for rows without a
+  description (nothing to copy).
+- Added determination `setDefaultMaxLength`: newly created rows get a meaningful
+  MaxLength (50) instead of a bare 0 when the user leaves it empty.
+- `copyToLanguage` is now a factory action with a `result`, so the UI can navigate
+  to the created drafts; the created instances also get unique `%cid`s.
+
 ### Fixed
 - **Runtime buffer now caches empty results** (negative caching), so repeated
   `translate_form` calls for forms without translations no longer re-run the

@@ -101,4 +101,4 @@ this table:
 | `FIELDNAME` | `ZABAP_FORM_TRANS_FIELD` (CHAR 30) | ✔ | Component name in your structure. |
 | `LANGU` | `ZABAP_FORM_TRANS_LANGU` (LANG) | ✔ | Language of the text. |
 | `DESCR` | `ZABAP_FORM_TRANS_DESCR` (CHAR 50) | | Translated text. |
-| `LENGTH` | `INT2` | | Max length; text longer than this is truncated at print time. `0` = no limit. |
+| `LENGTH` | `ZABAP_FORM_TRANS_MAXLEN` (INT2, domain range 0–9999) | | Max length; text longer than this is truncated at print time. `0` means no runtime limit; the maintenance app defaults an empty value to 50 (the description width). |

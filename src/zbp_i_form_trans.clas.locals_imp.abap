@@ -3,8 +3,19 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     CONSTANTS message_class TYPE symsgid VALUE 'ZABAP_FORM_TRANS_MSG'.
 
+    " Default maximum length applied when the user leaves MaxLength empty on
+    " create. It matches the storage width of the Description field, so it acts
+    " as "translate up to the full stored text".
+    CONSTANTS default_max_length TYPE i VALUE 50.
+
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       IMPORTING keys REQUEST requested_authorizations FOR translation RESULT result.
+
+    METHODS get_instance_features FOR INSTANCE FEATURES
+      IMPORTING keys REQUEST requested_features FOR translation RESULT result ##NEEDED.
+
+    METHODS setdefaultmaxlength FOR DETERMINE ON MODIFY
+      IMPORTING keys FOR translation~setdefaultmaxlength.
 
     METHODS validatemaxlength FOR VALIDATE ON SAVE
       IMPORTING keys FOR translation~validatemaxlength.
@@ -16,7 +27,7 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR translation~validateuniquekey.
 
     METHODS copytolanguage FOR MODIFY
-      IMPORTING keys FOR ACTION translation~copytolanguage.
+      IMPORTING keys FOR ACTION translation~copytolanguage RESULT result.
 
 ENDCLASS.
 
@@ -34,6 +45,51 @@ CLASS lhc_translation IMPLEMENTATION.
                                            THEN if_abap_behv=>auth-allowed )
           %delete                = COND #( WHEN requested_authorizations-%delete = if_abap_behv=>mk-on
                                            THEN if_abap_behv=>auth-allowed ) ) ).
+  ENDMETHOD.
+
+  METHOD get_instance_features.
+    READ ENTITIES OF zi_form_trans IN LOCAL MODE
+         ENTITY translation
+         FIELDS ( description ) WITH CORRESPONDING #( keys )
+         RESULT DATA(translations).
+
+    " copyToLanguage only makes sense once there is a description to copy;
+    " disable it for empty / brand-new rows so the button is not offered
+    " when it would just fail or copy nothing meaningful.
+    result = VALUE #( FOR translation IN translations
+                      ( %tky                   = translation-%tky
+                        %action-copyToLanguage = COND #( WHEN translation-description IS NOT INITIAL
+                                                         THEN if_abap_behv=>fc-o-enabled
+                                                         ELSE if_abap_behv=>fc-o-disabled ) ) ).
+  ENDMETHOD.
+
+  METHOD setdefaultmaxlength.
+    READ ENTITIES OF zi_form_trans IN LOCAL MODE
+         ENTITY translation
+         FIELDS ( maxlength ) WITH CORRESPONDING #( keys )
+         RESULT DATA(translations).
+
+    DATA update TYPE TABLE FOR UPDATE zi_form_trans.
+
+    " Give newly created rows a meaningful, non-zero MaxLength instead of a
+    " bare 0. Only fill it when the user left it empty.
+    update = VALUE #( FOR translation IN translations
+                      WHERE ( maxlength IS INITIAL )
+                      ( %tky              = translation-%tky
+                        maxlength         = default_max_length
+                        %control-maxlength = if_abap_behv=>mk-on ) ).
+
+    IF update IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    MODIFY ENTITIES OF zi_form_trans IN LOCAL MODE
+           ENTITY translation
+           UPDATE FIELDS ( maxlength ) WITH update
+           REPORTED DATA(reported_update).
+
+    reported-translation = VALUE #( BASE reported-translation
+                                    ( LINES OF reported_update-translation ) ).
   ENDMETHOD.
 
   METHOD validatemaxlength.
@@ -143,10 +199,9 @@ CLASS lhc_translation IMPLEMENTATION.
     DATA draft_keys  TYPE TABLE FOR READ IMPORT zi_form_trans.
 
     LOOP AT translations INTO DATA(source).
+      " Empty target languages are reported later (message 004); building an
+      " empty key here is harmless because the existence reads simply find nothing.
       DATA(requested_language) = keys[ %tky = source-%tky ]-%param-TargetLanguage.
-      IF requested_language IS INITIAL.
-        CONTINUE.
-      ENDIF.
       APPEND VALUE #( %key-FormName    = source-formname
                       %key-FieldName   = source-fieldname
                       %key-LanguageKey = requested_language
@@ -171,6 +226,7 @@ CLASS lhc_translation IMPLEMENTATION.
     APPEND LINES OF existing_draft TO existing.
 
     DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
+    DATA(cid_index) = 0.
 
     LOOP AT translations INTO DATA(translation).
       DATA(target_language) = keys[ %tky = translation-%tky ]-%param-TargetLanguage.
@@ -216,7 +272,9 @@ CLASS lhc_translation IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
-      APPEND VALUE #( %cid        = keys[ %tky = translation-%tky ]-%cid
+      cid_index += 1.
+
+      APPEND VALUE #( %cid        = |CTL{ cid_index }|
                       formname    = translation-formname
                       fieldname   = translation-fieldname
                       languagekey = target_language
@@ -239,6 +297,10 @@ CLASS lhc_translation IMPLEMENTATION.
                                     ( LINES OF failed_create-translation ) ).
     reported-translation = VALUE #( BASE reported-translation
                                     ( LINES OF reported_create-translation ) ).
+
+    " Return the newly created drafts so the UI can navigate to them.
+    result = VALUE #( FOR created IN mapped_create-translation
+                      ( %tky = created-%tky ) ).
   ENDMETHOD.
 
 ENDCLASS.
