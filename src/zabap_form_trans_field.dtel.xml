@@ -9,11 +9,11 @@
     <SCRLEN1>10</SCRLEN1>
     <SCRLEN2>10</SCRLEN2>
     <SCRLEN3>10</SCRLEN3>
-    <DDTEXT>Field name</DDTEXT>
-    <REPTEXT>Field name</REPTEXT>
-    <SCRTEXT_S>Field name</SCRTEXT_S>
-    <SCRTEXT_M>Field name</SCRTEXT_M>
-    <SCRTEXT_L>Field name</SCRTEXT_L>
+    <DDTEXT>Field Name</DDTEXT>
+    <REPTEXT>Field Name</REPTEXT>
+    <SCRTEXT_S>Field</SCRTEXT_S>
+    <SCRTEXT_M>Field Name</SCRTEXT_M>
+    <SCRTEXT_L>Field Name</SCRTEXT_L>
     <DTELMASTER>E</DTELMASTER>
     <DATATYPE>CHAR</DATATYPE>
     <LENG>000030</LENG>

@@ -12,6 +12,8 @@ define root view entity ZI_FORM_TRANS
 {
   key form                  as FormName,
   key fieldname             as FieldName,
+
+      @Semantics.language: true
   key langu                 as LanguageKey,
 
       descr                 as Description,
