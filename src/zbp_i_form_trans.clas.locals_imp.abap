@@ -3,9 +3,25 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     CONSTANTS message_class TYPE symsgid VALUE 'ZABAP_FORM_TRANS_MSG'.
 
-    " Counter for the content IDs of instances created inside copyToLanguage.
-    " It is CLASS-DATA on purpose: %cid must be unique across the whole
-    " transactional buffer, not just within a single handler invocation.
+    CONSTANTS: msg_maxlength_invalid TYPE symsgno VALUE '001',
+               msg_description_empty TYPE symsgno VALUE '002',
+               msg_duplicate_key     TYPE symsgno VALUE '003',
+               msg_language_missing  TYPE symsgno VALUE '004',
+               msg_same_language     TYPE symsgno VALUE '005',
+               msg_text_truncated    TYPE symsgno VALUE '006',
+               msg_key_not_upper     TYPE symsgno VALUE '007'.
+
+    " State areas let the framework replace the messages of a previous validation
+    " run instead of piling them up in the message popover on every Prepare.
+    CONSTANTS: area_maxlength   TYPE string VALUE 'MAXLENGTH',
+               area_description TYPE string VALUE 'DESCRIPTION',
+               area_unique_key  TYPE string VALUE 'UNIQUE_KEY',
+               area_key_case    TYPE string VALUE 'KEY_CASE'.
+
+    " Upper bound of domain ZABAP_FORM_MAXLENGTH. Fixed values are only enforced
+    " on the UI, so the same range has to be checked again on the server side.
+    CONSTANTS max_length_limit TYPE i VALUE 9999.
+
     CLASS-DATA cid_counter TYPE i.
 
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
@@ -22,6 +38,9 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS validateuniquekey FOR VALIDATE ON SAVE
       IMPORTING keys FOR translation~validateuniquekey.
+
+    METHODS validatekeycase FOR VALIDATE ON SAVE
+      IMPORTING keys FOR translation~validatekeycase.
 
     METHODS copytolanguage FOR MODIFY
       IMPORTING keys FOR ACTION translation~copytolanguage.
@@ -82,16 +101,22 @@ CLASS lhc_translation IMPLEMENTATION.
 
     LOOP AT translations INTO DATA(translation).
 
+      " Drop the messages of the previous run for this instance.
+      APPEND VALUE #( %tky        = translation-%tky
+                      %state_area = area_maxlength ) TO reported-translation.
+
       " MaxLength = 0 is a valid value and means "no length limit"
       " (see ZCL_FORM_TRANSLATION, which only truncates when length > 0).
-      IF translation-maxlength < 0.
+      IF    translation-maxlength < 0
+         OR translation-maxlength > max_length_limit.
 
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
 
         APPEND VALUE #( %tky               = translation-%tky
+                        %state_area        = area_maxlength
                         %element-maxlength = if_abap_behv=>mk-on
                         %msg               = new_message( id       = message_class
-                                                          number   = '001'
+                                                          number   = msg_maxlength_invalid
                                                           severity = if_abap_behv_message=>severity-error ) )
                TO reported-translation.
 
@@ -100,14 +125,15 @@ CLASS lhc_translation IMPLEMENTATION.
 
       " Non-blocking warning: at print time the description is truncated to
       " MaxLength, so warn the maintainer that text will be cut off.
-      IF     translation-maxlength           > 0
+      IF     translation-maxlength             > 0
          AND strlen( translation-description ) > translation-maxlength.
 
         APPEND VALUE #( %tky                 = translation-%tky
+                        %state_area          = area_maxlength
                         %element-description = if_abap_behv=>mk-on
                         %element-maxlength   = if_abap_behv=>mk-on
                         %msg                 = new_message( id       = message_class
-                                                            number   = '006'
+                                                            number   = msg_text_truncated
                                                             severity = if_abap_behv_message=>severity-warning
                                                             v1       = |{ translation-maxlength }| ) )
                TO reported-translation.
@@ -124,14 +150,18 @@ CLASS lhc_translation IMPLEMENTATION.
          RESULT DATA(translations).
 
     LOOP AT translations INTO DATA(translation).
+
+      APPEND VALUE #( %tky        = translation-%tky
+                      %state_area = area_description ) TO reported-translation.
+
       IF translation-description IS INITIAL.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
 
-        " Fix #4: translatable message from the message class.
         APPEND VALUE #( %tky                 = translation-%tky
+                        %state_area          = area_description
                         %element-description = if_abap_behv=>mk-on
                         %msg                 = new_message( id       = message_class
-                                                            number   = '002'
+                                                            number   = msg_description_empty
                                                             severity = if_abap_behv_message=>severity-error ) )
                TO reported-translation.
       ENDIF.
@@ -147,9 +177,11 @@ CLASS lhc_translation IMPLEMENTATION.
 
     LOOP AT translations INTO DATA(translation).
 
-      " A newly created row must not clash with an already active translation
-      " for the same Form / Field / Language. Report a friendly duplicate
-      " message instead of letting the framework raise a generic save error.
+      APPEND VALUE #( %tky        = translation-%tky
+                      %state_area = area_unique_key ) TO reported-translation.
+
+      " Only reached for the create trigger, so an active row with the same key
+      " is always a real duplicate and never the instance being edited.
       SELECT SINGLE @abap_true FROM zabap_form_trans
         WHERE form      = @translation-formname
           AND fieldname = @translation-fieldname
@@ -159,11 +191,46 @@ CLASS lhc_translation IMPLEMENTATION.
       IF exists = abap_true.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
 
-        APPEND VALUE #( %tky = translation-%tky
-                        %msg = new_message( id       = message_class
-                                            number   = '003'
-                                            severity = if_abap_behv_message=>severity-error
-                                            v1       = translation-languagekey ) )
+        APPEND VALUE #( %tky        = translation-%tky
+                        %state_area = area_unique_key
+                        %msg        = new_message( id       = message_class
+                                                   number   = msg_duplicate_key
+                                                   severity = if_abap_behv_message=>severity-error
+                                                   v1       = translation-languagekey ) )
+               TO reported-translation.
+      ENDIF.
+
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD validatekeycase.
+
+    READ ENTITIES OF zi_form_trans IN LOCAL MODE
+         ENTITY translation
+         FIELDS ( formname fieldname ) WITH CORRESPONDING #( keys )
+         RESULT DATA(translations).
+
+    LOOP AT translations INTO DATA(translation).
+
+      APPEND VALUE #( %tky        = translation-%tky
+                      %state_area = area_key_case ) TO reported-translation.
+
+      " HANA compares case sensitively and OData does not apply the DDIC
+      " lower case flag, so a key stored in lower case can never be found by
+      " ZCL_FORM_TRANSLATION at print time. LanguageKey is excluded on purpose:
+      " SAP language keys are case significant and may legitimately be lower case.
+      IF    translation-formname  <> to_upper( translation-formname )
+         OR translation-fieldname <> to_upper( translation-fieldname ).
+
+        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+
+        APPEND VALUE #( %tky               = translation-%tky
+                        %state_area        = area_key_case
+                        %element-formname  = if_abap_behv=>mk-on
+                        %element-fieldname = if_abap_behv=>mk-on
+                        %msg               = new_message( id       = message_class
+                                                          number   = msg_key_not_upper
+                                                          severity = if_abap_behv_message=>severity-error ) )
                TO reported-translation.
       ENDIF.
 
@@ -189,14 +256,15 @@ CLASS lhc_translation IMPLEMENTATION.
                       %is_draft        = if_abap_behv=>mk-on  ) TO draft_keys.
     ENDLOOP.
 
+    " Only the key fields are needed by the duplicate check in copyToLanguage.
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
-         ALL FIELDS WITH active_keys
+         FIELDS ( formname fieldname languagekey ) WITH active_keys
          RESULT result.
 
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
-         ALL FIELDS WITH draft_keys
+         FIELDS ( formname fieldname languagekey ) WITH draft_keys
          RESULT DATA(existing_draft).
 
     APPEND LINES OF existing_draft TO result.
@@ -205,10 +273,21 @@ CLASS lhc_translation IMPLEMENTATION.
 
   METHOD copytolanguage.
 
+    " Keys that cannot be read must be reported as failed, otherwise the action
+    " silently reports success while having copied nothing.
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
-         ALL FIELDS WITH CORRESPONDING #( keys )
-         RESULT DATA(translations).
+         FIELDS ( formname fieldname languagekey description maxlength )
+         WITH CORRESPONDING #( keys )
+         RESULT DATA(translations)
+         FAILED DATA(read_failed).
+
+    failed-translation = VALUE #( BASE failed-translation
+                                  ( LINES OF read_failed-translation ) ).
+
+    IF translations IS INITIAL.
+      RETURN.
+    ENDIF.
 
     DATA(existing) = read_existing_targets( sources     = translations
                                             action_keys = keys ).
@@ -222,7 +301,7 @@ CLASS lhc_translation IMPLEMENTATION.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
         APPEND VALUE #( %tky = translation-%tky
                         %msg = new_message( id       = message_class
-                                            number   = '004'
+                                            number   = msg_language_missing
                                             severity = if_abap_behv_message=>severity-error ) )
                TO reported-translation.
         CONTINUE.
@@ -232,7 +311,7 @@ CLASS lhc_translation IMPLEMENTATION.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
         APPEND VALUE #( %tky = translation-%tky
                         %msg = new_message( id       = message_class
-                                            number   = '005'
+                                            number   = msg_same_language
                                             severity = if_abap_behv_message=>severity-error
                                             v1       = target_language ) )
                TO reported-translation.
@@ -252,7 +331,7 @@ CLASS lhc_translation IMPLEMENTATION.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
         APPEND VALUE #( %tky = translation-%tky
                         %msg = new_message( id       = message_class
-                                            number   = '003'
+                                            number   = msg_duplicate_key
                                             severity = if_abap_behv_message=>severity-error
                                             v1       = target_language ) )
                TO reported-translation.

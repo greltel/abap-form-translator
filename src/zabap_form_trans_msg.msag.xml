@@ -44,6 +44,12 @@
      <MSGNR>006</MSGNR>
      <TEXT>Description is longer than the maximum length &amp;1 and will be truncated</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Form and field names must be entered in upper case</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

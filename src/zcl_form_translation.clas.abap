@@ -1,10 +1,9 @@
-"! <p class="shorttext synchronized" lang="en">Form Translation Class</p>
+"! <p class="shorttext synchronized">Form Translation Class</p>
 CLASS zcl_form_translation DEFINITION
   PUBLIC
-  CREATE PUBLIC .
+  CREATE PUBLIC.
 
   PUBLIC SECTION.
-
     CONSTANTS version TYPE string VALUE '1.2.0' ##NEEDED.
 
     "! <p class="shorttext synchronized">Invalidates the in-memory translation buffer</p>
@@ -13,16 +12,15 @@ CLASS zcl_form_translation DEFINITION
     CLASS-METHODS clear_buffer.
 
     "! <p class="shorttext synchronized">Translates fields of a structure based on DB configuration</p>
-    "! @parameter formname | <p class="shorttext synchronized">Smartform/Form Name (Key in DB)</p>
-    "! @parameter langu | <p class="shorttext synchronized">Target Language</p>
+    "! @parameter formname      | <p class="shorttext synchronized">Smartform/Form Name (Key in DB)</p>
+    "! @parameter langu         | <p class="shorttext synchronized">Target Language</p>
     "! @parameter form_elements | <p class="shorttext synchronized">Structure containing fields to be translated</p>
     METHODS translate_form
-      IMPORTING
-        !formname        TYPE zabap_form_trans_name
-        !langu           TYPE zabap_form_trans_langu OPTIONAL
-        !enable_fallback TYPE abap_boolean DEFAULT abap_true
-      CHANGING
-        !form_elements   TYPE any .
+      IMPORTING formname        TYPE zabap_form_trans_name
+                langu           TYPE zabap_form_trans_langu OPTIONAL
+                enable_fallback TYPE abap_boolean           DEFAULT abap_true
+      CHANGING  form_elements   TYPE any.
+
   PROTECTED SECTION.
     CONSTANTS default_language TYPE spras VALUE 'E'.
 
@@ -57,7 +55,6 @@ CLASS zcl_form_translation DEFINITION
 ENDCLASS.
 
 
-
 CLASS zcl_form_translation IMPLEMENTATION.
   METHOD translate_form.
     IF formname IS INITIAL.
@@ -78,7 +75,9 @@ CLASS zcl_form_translation IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
-      ASSIGN COMPONENT translation->*-fieldname OF STRUCTURE form_elements TO FIELD-SYMBOL(<field_value>).
+      DATA(component_name) = to_upper( translation->*-fieldname ).
+
+      ASSIGN COMPONENT component_name OF STRUCTURE form_elements TO FIELD-SYMBOL(<field_value>).
 
       IF NOT ( syst-subrc IS INITIAL AND <field_value> IS ASSIGNED ).
         CONTINUE.
@@ -107,6 +106,10 @@ CLASS zcl_form_translation IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_translations.
+    " HANA compares case sensitively. Callers (and legacy data) may pass the
+    " form name in mixed case, so normalise it before both the buffer lookup
+    " and the SELECT.
+    DATA(form_key) = CONV zabap_form_trans_name( to_upper( formname ) ).
 
     DATA language TYPE spras.
 
@@ -123,7 +126,7 @@ CLASS zcl_form_translation IMPLEMENTATION.
     DATA(use_fallback) = xsdbool(     language        <> default_language
                                   AND enable_fallback  = abap_true ).
 
-    ASSIGN buffer[ formname     = formname
+    ASSIGN buffer[ formname     = form_key
                    langu        = language
                    use_fallback = use_fallback ] TO FIELD-SYMBOL(<cached>).
     IF syst-subrc IS INITIAL AND <cached> IS ASSIGNED.
@@ -133,7 +136,7 @@ CLASS zcl_form_translation IMPLEMENTATION.
 
     SELECT FROM zabap_form_trans
       FIELDS form, fieldname, langu, descr, length
-      WHERE form = @formname
+      WHERE form = @form_key
         AND (    langu = @language
               OR ( langu = @default_language AND @use_fallback = @abap_true ) )
       INTO TABLE @DATA(candidates).
@@ -158,15 +161,13 @@ CLASS zcl_form_translation IMPLEMENTATION.
 
     " Cache the outcome - including the empty case - so that repeated calls
     " for forms without translations do not re-run the SELECT (negative caching).
-    INSERT VALUE #( formname     = formname
+    INSERT VALUE #( formname     = form_key
                     langu        = language
                     use_fallback = use_fallback
                     translations = result ) INTO TABLE buffer.
-
   ENDMETHOD.
 
   METHOD clear_buffer.
     CLEAR buffer.
   ENDMETHOD.
-
 ENDCLASS.

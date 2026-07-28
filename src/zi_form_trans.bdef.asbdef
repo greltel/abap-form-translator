@@ -24,11 +24,14 @@ etag master LocalLastChangedAt
   draft action Activate optimized;
   draft action Discard;
   draft action Resume;
+
+  // validateUniqueKey and validateKeyCase are deliberately NOT assigned to Prepare:
+  // Prepare ignores the create/update trigger conditions and runs for edit drafts as
+  // well, where the key of the draft is by definition identical to its own active row.
   draft determine action Prepare
   {
     validation validateMaxLength;
     validation validateDescription;
-    validation validateUniqueKey;
   }
 
   validation validateMaxLength on save { field MaxLength, Description; create; update; }
@@ -36,6 +39,8 @@ etag master LocalLastChangedAt
   validation validateDescription on save { field Description; create; update; }
 
   validation validateUniqueKey on save { field FormName, FieldName, LanguageKey; create; }
+
+  validation validateKeyCase on save { field FormName, FieldName; create; }
 
   mapping for zabap_form_trans
     {

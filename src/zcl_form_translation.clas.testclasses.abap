@@ -189,3 +189,158 @@ CLASS ltc_translator_test IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
+CLASS lcl_real DEFINITION INHERITING FROM zcl_form_translation.
+  PUBLIC SECTION.
+    "! Exposes the protected implementation so it can be tested directly.
+    METHODS read
+      IMPORTING formname        TYPE zabap_form_trans_name
+                langu           TYPE zabap_form_trans_langu
+                enable_fallback TYPE abap_boolean DEFAULT abap_true
+      RETURNING VALUE(result)   TYPE zcl_form_translation=>translations.
+ENDCLASS.
+
+
+CLASS lcl_real IMPLEMENTATION.
+  METHOD read.
+    result = get_translations( formname        = formname
+                               langu           = langu
+                               enable_fallback = enable_fallback ).
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS ltc_get_translations DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+
+    CLASS-DATA environment TYPE REF TO if_osql_test_environment.
+
+    DATA cut TYPE REF TO lcl_real.
+
+    CLASS-METHODS class_setup.
+    CLASS-METHODS class_teardown.
+
+    METHODS setup.
+    METHODS given_standard_rows.
+
+    METHODS test_target_language_wins   FOR TESTING.
+    METHODS test_fallback_fills_gap     FOR TESTING.
+    METHODS test_fallback_disabled      FOR TESTING.
+    METHODS test_buffer_is_used         FOR TESTING.
+    METHODS test_negative_caching       FOR TESTING.
+    METHODS test_clear_buffer_reloads   FOR TESTING.
+    METHODS test_form_name_lower_case   FOR TESTING.
+
+ENDCLASS.
+
+
+CLASS ltc_get_translations IMPLEMENTATION.
+
+  METHOD class_setup.
+    environment = cl_osql_test_environment=>create(
+                    i_dependency_list = VALUE #( ( 'ZABAP_FORM_TRANS' ) ) ).
+  ENDMETHOD.
+
+  METHOD class_teardown.
+    environment->destroy( ).
+  ENDMETHOD.
+
+  METHOD setup.
+    environment->clear_doubles( ).
+    zcl_form_translation=>clear_buffer( ).
+    cut = NEW lcl_real( ).
+  ENDMETHOD.
+
+  METHOD given_standard_rows.
+    DATA rows TYPE STANDARD TABLE OF zabap_form_trans WITH EMPTY KEY.
+
+    rows = VALUE #( ( form = 'ZTEST' fieldname = 'TITLE'  langu = 'E' descr = 'Invoice' )
+                    ( form = 'ZTEST' fieldname = 'TITLE'  langu = 'D' descr = 'Rechnung' )
+                    ( form = 'ZTEST' fieldname = 'FOOTER' langu = 'E' descr = 'Thank you' ) ).
+
+    environment->insert_test_data( rows ).
+  ENDMETHOD.
+
+  METHOD test_target_language_wins.
+    given_standard_rows( ).
+
+    DATA(result) = cut->read( formname = 'ZTEST' langu = 'D' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'Rechnung'
+                                        act = result[ fieldname = 'TITLE' ]-descr ).
+  ENDMETHOD.
+
+  METHOD test_fallback_fills_gap.
+    given_standard_rows( ).
+
+    DATA(result) = cut->read( formname = 'ZTEST' langu = 'D' ).
+
+    " FOOTER exists in E only and must be served through the fallback.
+    cl_abap_unit_assert=>assert_equals( exp = 'Thank you'
+                                        act = result[ fieldname = 'FOOTER' ]-descr ).
+  ENDMETHOD.
+
+  METHOD test_fallback_disabled.
+    given_standard_rows( ).
+
+    DATA(result) = cut->read( formname        = 'ZTEST'
+                              langu           = 'D'
+                              enable_fallback = abap_false ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 1
+                                        act = lines( result ) ).
+  ENDMETHOD.
+
+  METHOD test_buffer_is_used.
+    given_standard_rows( ).
+
+    cut->read( formname = 'ZTEST' langu = 'E' ).
+
+    " Remove the data: a second call may only succeed from the buffer.
+    environment->clear_doubles( ).
+
+    DATA(result) = cut->read( formname = 'ZTEST' langu = 'E' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 2
+                                        act = lines( result ) ).
+  ENDMETHOD.
+
+  METHOD test_negative_caching.
+    DATA(result) = cut->read( formname = 'ZTEST' langu = 'E' ).
+
+    cl_abap_unit_assert=>assert_initial( result ).
+
+    given_standard_rows( ).
+
+    " The empty outcome is cached, so newly inserted rows are not picked up.
+    result = cut->read( formname = 'ZTEST' langu = 'E' ).
+
+    cl_abap_unit_assert=>assert_initial( result ).
+  ENDMETHOD.
+
+  METHOD test_clear_buffer_reloads.
+    cut->read( formname = 'ZTEST' langu = 'E' ).
+
+    given_standard_rows( ).
+    zcl_form_translation=>clear_buffer( ).
+
+    DATA(result) = cut->read( formname = 'ZTEST' langu = 'E' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 2
+                                        act = lines( result ) ).
+  ENDMETHOD.
+
+  METHOD test_form_name_lower_case.
+    given_standard_rows( ).
+
+    " A caller passing the form name in lower case must still find the rows.
+    DATA(result) = cut->read( formname = 'ztest' langu = 'E' ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 2
+                                        act = lines( result ) ).
+  ENDMETHOD.
+
+ENDCLASS.

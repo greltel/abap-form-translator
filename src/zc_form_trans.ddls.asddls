@@ -31,6 +31,7 @@ define root view entity ZC_FORM_TRANS
   key LanguageKey,
 
       @UI.hidden: true
+      @Semantics.text: true
       _LanguageText.LanguageName as LanguageName,
 
       @Search.defaultSearchElement: true
