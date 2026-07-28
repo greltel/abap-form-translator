@@ -19,7 +19,7 @@
      <DDLANGUAGE>E</DDLANGUAGE>
      <DOMVALUE_L>0</DOMVALUE_L>
      <DOMVALUE_H>9999</DOMVALUE_H>
-     <DDTEXT>Allowed range 0 to 9999 (0 = full description length)</DDTEXT>
+     <DDTEXT>Allowed range 0 to 9999 (0 = no length limit)</DDTEXT>
     </DD07V>
    </DD07V_TAB>
   </asx:values>

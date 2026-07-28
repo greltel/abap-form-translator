@@ -3,19 +3,16 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     CONSTANTS message_class TYPE symsgid VALUE 'ZABAP_FORM_TRANS_MSG'.
 
-    " Default maximum length applied when the user leaves MaxLength empty on
-    " create. It matches the storage width of the Description field, so it acts
-    " as "translate up to the full stored text".
-    CONSTANTS default_max_length TYPE i VALUE 50.
+    " Counter for the content IDs of instances created inside copyToLanguage.
+    " It is CLASS-DATA on purpose: %cid must be unique across the whole
+    " transactional buffer, not just within a single handler invocation.
+    CLASS-DATA cid_counter TYPE i.
 
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       IMPORTING keys REQUEST requested_authorizations FOR translation RESULT result.
 
     METHODS get_instance_features FOR INSTANCE FEATURES
-      IMPORTING keys REQUEST requested_features FOR translation RESULT result ##NEEDED.
-
-    METHODS setdefaultmaxlength FOR DETERMINE ON MODIFY
-      IMPORTING keys FOR translation~setdefaultmaxlength.
+      IMPORTING keys REQUEST requested_features FOR translation RESULT result.
 
     METHODS validatemaxlength FOR VALIDATE ON SAVE
       IMPORTING keys FOR translation~validatemaxlength.
@@ -28,6 +25,13 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS copytolanguage FOR MODIFY
       IMPORTING keys FOR ACTION translation~copytolanguage RESULT result.
+
+    "! Reads the translations that already occupy the requested target keys,
+    "! both in the active and in the draft persistence.
+    METHODS read_existing_targets
+      IMPORTING sources       TYPE TABLE FOR READ RESULT zi_form_trans
+                action_keys   TYPE TABLE FOR ACTION IMPORT zi_form_trans~copytolanguage
+      RETURNING VALUE(result) TYPE TABLE FOR READ RESULT zi_form_trans.
 
 ENDCLASS.
 
@@ -48,6 +52,10 @@ CLASS lhc_translation IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_instance_features.
+    IF requested_features-%action-copyToLanguage = if_abap_behv=>mk-off.
+      RETURN.
+    ENDIF.
+
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          FIELDS ( description ) WITH CORRESPONDING #( keys )
@@ -61,35 +69,6 @@ CLASS lhc_translation IMPLEMENTATION.
                         %action-copyToLanguage = COND #( WHEN translation-description IS NOT INITIAL
                                                          THEN if_abap_behv=>fc-o-enabled
                                                          ELSE if_abap_behv=>fc-o-disabled ) ) ).
-  ENDMETHOD.
-
-  METHOD setdefaultmaxlength.
-    READ ENTITIES OF zi_form_trans IN LOCAL MODE
-         ENTITY translation
-         FIELDS ( maxlength ) WITH CORRESPONDING #( keys )
-         RESULT DATA(translations).
-
-    DATA update TYPE TABLE FOR UPDATE zi_form_trans.
-
-    " Give newly created rows a meaningful, non-zero MaxLength instead of a
-    " bare 0. Only fill it when the user left it empty.
-    update = VALUE #( FOR translation IN translations
-                      WHERE ( maxlength IS INITIAL )
-                      ( %tky              = translation-%tky
-                        maxlength         = default_max_length
-                        %control-maxlength = if_abap_behv=>mk-on ) ).
-
-    IF update IS INITIAL.
-      RETURN.
-    ENDIF.
-
-    MODIFY ENTITIES OF zi_form_trans IN LOCAL MODE
-           ENTITY translation
-           UPDATE FIELDS ( maxlength ) WITH update
-           REPORTED DATA(reported_update).
-
-    reported-translation = VALUE #( BASE reported-translation
-                                    ( LINES OF reported_update-translation ) ).
   ENDMETHOD.
 
   METHOD validatemaxlength.
@@ -188,20 +167,15 @@ CLASS lhc_translation IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
-  METHOD copytolanguage.
-
-    READ ENTITIES OF zi_form_trans IN LOCAL MODE
-         ENTITY translation
-         ALL FIELDS WITH CORRESPONDING #( keys )
-         RESULT DATA(translations).
+  METHOD read_existing_targets.
 
     DATA active_keys TYPE TABLE FOR READ IMPORT zi_form_trans.
     DATA draft_keys  TYPE TABLE FOR READ IMPORT zi_form_trans.
 
-    LOOP AT translations INTO DATA(source).
-      " Empty target languages are reported later (message 004); building an
-      " empty key here is harmless because the existence reads simply find nothing.
-      DATA(requested_language) = keys[ %tky = source-%tky ]-%param-TargetLanguage.
+    LOOP AT sources INTO DATA(source).
+      " Empty target languages are reported by the caller (message 004); building
+      " an empty key here is harmless because the reads below simply find nothing.
+      DATA(requested_language) = action_keys[ %tky = source-%tky ]-%param-TargetLanguage.
       APPEND VALUE #( %key-FormName    = source-formname
                       %key-FieldName   = source-fieldname
                       %key-LanguageKey = requested_language
@@ -215,18 +189,28 @@ CLASS lhc_translation IMPLEMENTATION.
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          ALL FIELDS WITH active_keys
-         RESULT DATA(existing_active).
+         RESULT result.
 
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          ALL FIELDS WITH draft_keys
          RESULT DATA(existing_draft).
 
-    DATA(existing) = existing_active.
-    APPEND LINES OF existing_draft TO existing.
+    APPEND LINES OF existing_draft TO result.
+
+  ENDMETHOD.
+
+  METHOD copytolanguage.
+
+    READ ENTITIES OF zi_form_trans IN LOCAL MODE
+         ENTITY translation
+         ALL FIELDS WITH CORRESPONDING #( keys )
+         RESULT DATA(translations).
+
+    DATA(existing) = read_existing_targets( sources     = translations
+                                            action_keys = keys ).
 
     DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
-    DATA(cid_index) = 0.
 
     LOOP AT translations INTO DATA(translation).
       DATA(target_language) = keys[ %tky = translation-%tky ]-%param-TargetLanguage.
@@ -272,9 +256,9 @@ CLASS lhc_translation IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
-      cid_index += 1.
+      cid_counter += 1.
 
-      APPEND VALUE #( %cid        = |CTL{ cid_index }|
+      APPEND VALUE #( %cid        = |CTL{ cid_counter }|
                       formname    = translation-formname
                       fieldname   = translation-fieldname
                       languagekey = target_language
@@ -282,7 +266,26 @@ CLASS lhc_translation IMPLEMENTATION.
                       maxlength   = translation-maxlength
                       %is_draft   = if_abap_behv=>mk-on )
              TO new_entries.
+
+      " The key of the new instance is fully determined by the data above (no
+      " numbering), so the action result can be built here: %tky identifies the
+      " source instance the action was called on, %param carries the new draft.
+      APPEND VALUE #( %tky   = translation-%tky
+                      %param = VALUE #( %is_draft        = if_abap_behv=>mk-on
+                                        %key-FormName    = translation-formname
+                                        %key-FieldName   = translation-fieldname
+                                        %key-LanguageKey = target_language
+                                        formname         = translation-formname
+                                        fieldname        = translation-fieldname
+                                        languagekey      = target_language
+                                        description      = translation-description
+                                        maxlength        = translation-maxlength ) )
+             TO result.
     ENDLOOP.
+
+    IF new_entries IS INITIAL.
+      RETURN.
+    ENDIF.
 
     MODIFY ENTITIES OF zi_form_trans IN LOCAL MODE
            ENTITY translation
@@ -292,15 +295,12 @@ CLASS lhc_translation IMPLEMENTATION.
            FAILED DATA(failed_create)
            REPORTED DATA(reported_create).
 
-    mapped-translation   = mapped_create-translation.
+    mapped-translation   = VALUE #( BASE mapped-translation
+                                    ( LINES OF mapped_create-translation ) ).
     failed-translation   = VALUE #( BASE failed-translation
                                     ( LINES OF failed_create-translation ) ).
     reported-translation = VALUE #( BASE reported-translation
                                     ( LINES OF reported_create-translation ) ).
-
-    " Return the newly created drafts so the UI can navigate to them.
-    result = VALUE #( FOR created IN mapped_create-translation
-                      ( %tky = created-%tky ) ).
   ENDMETHOD.
 
 ENDCLASS.
