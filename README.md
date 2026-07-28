@@ -92,8 +92,7 @@ server) so hot-swapped texts take effect immediately.
 
 ### Database table `ZABAP_FORM_TRANS`
 
-Maintain the texts (via `SM30`, Business Configuration, or the RAP/Fiori app) in
-this table:
+Maintain the texts through the RAP/Fiori app (`ZUI_FORM_TRANS_BIN`) in this table:
 
 | Field | Type | Key | Description |
 |---|---|---|---|
