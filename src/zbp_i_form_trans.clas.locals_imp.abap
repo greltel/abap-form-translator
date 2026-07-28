@@ -24,14 +24,17 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR translation~validateuniquekey.
 
     METHODS copytolanguage FOR MODIFY
-      IMPORTING keys FOR ACTION translation~copytolanguage RESULT result.
+      IMPORTING keys FOR ACTION translation~copytolanguage.
+
+    TYPES translation_result TYPE TABLE FOR READ RESULT zi_form_trans.
+    TYPES copy_action_keys   TYPE TABLE FOR ACTION IMPORT zi_form_trans~copytolanguage.
 
     "! Reads the translations that already occupy the requested target keys,
     "! both in the active and in the draft persistence.
     METHODS read_existing_targets
-      IMPORTING sources       TYPE TABLE FOR READ RESULT zi_form_trans
-                action_keys   TYPE TABLE FOR ACTION IMPORT zi_form_trans~copytolanguage
-      RETURNING VALUE(result) TYPE TABLE FOR READ RESULT zi_form_trans.
+      IMPORTING sources       TYPE translation_result
+                action_keys   TYPE copy_action_keys
+      RETURNING VALUE(result) TYPE translation_result.
 
 ENDCLASS.
 
@@ -267,20 +270,6 @@ CLASS lhc_translation IMPLEMENTATION.
                       %is_draft   = if_abap_behv=>mk-on )
              TO new_entries.
 
-      " The key of the new instance is fully determined by the data above (no
-      " numbering), so the action result can be built here: %tky identifies the
-      " source instance the action was called on, %param carries the new draft.
-      APPEND VALUE #( %tky   = translation-%tky
-                      %param = VALUE #( %is_draft        = if_abap_behv=>mk-on
-                                        %key-FormName    = translation-formname
-                                        %key-FieldName   = translation-fieldname
-                                        %key-LanguageKey = target_language
-                                        formname         = translation-formname
-                                        fieldname        = translation-fieldname
-                                        languagekey      = target_language
-                                        description      = translation-description
-                                        maxlength        = translation-maxlength ) )
-             TO result.
     ENDLOOP.
 
     IF new_entries IS INITIAL.
