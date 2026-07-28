@@ -30,6 +30,10 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 * **No more SE63:** Forget about the painful standard translation process for forms.
 * **Zero Hardcoding:** Keep your form logic clean. No more `IF sy-langu = 'D'. text = 'Kunde'. ENDIF`.
 * **Hot-Swap Texts:** Change a label description in Production without a Transport Request.
+  Note: the table is buffered, so a change becomes visible to other application
+  servers after the buffer synchronisation interval (typically ~60s). Inside a
+  long-running session (mass print / batch job) call `ZCL_FORM_TRANSLATION=>clear_buffer( )`
+  to pick up changes immediately.
 * **Generic:** Works with **any** ABAP flat structure or Form interface using RTTI.
 * **Performance:** Optimized with table buffering to ensure zero impact on print times.
 * **Unit Tested:** Includes built-in ABAP Unit tests.
