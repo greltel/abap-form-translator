@@ -37,6 +37,9 @@
     "ignoreSyntaxCheck": true,
     "addFilenames": true,
     "addCommonJS": true,
-    "unknownTypes": "runtimeError"
+    "unknownTypes": "runtimeError",
+    "setup": {
+      "filename": "../db_setup.mjs",
+      "preFunction": "setupDatabase"
+    }
   }
-}
