@@ -66,9 +66,11 @@ DATA: BEGIN OF labels,
 labels-title = 'Invoice'.
 
 " 2.Translate dynamically based on Language and DB Configuration
-NEW zcl_form_translation( )->translate_form(
+DATA(translator) = CAST zif_form_translation( NEW zcl_form_translation( ) ).
+
+translator->translate_form(
       EXPORTING formname      = 'ZINVOICE_FORM'   " Key in ZABAP_FORM_TRANS
-                langu         = cl_abap_context_info=>get_user_language_abap_format( )         " e.g., NAST-SPRAS
+                langu         = cl_abap_context_info=>get_user_language_abap_format( )
       CHANGING  form_elements = labels ).         " The structure to be translated
 
 " 3. The labels structure now contains the translated texts from ZABAP_FORM_TRANS
