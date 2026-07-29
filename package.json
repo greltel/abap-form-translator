@@ -4,7 +4,7 @@
   "private": "true",
   "description": "ABAP Form Translator off-stack execution",
   "scripts": {
-    "test": "rimraf output && abap_transpile && echo RUNNING && node output/index.mjs"
+    "test": "node remove-tests.mjs && rimraf output && abap_transpile && echo RUNNING && node output/index.mjs"
   },
   "devDependencies": {
     "@abaplint/cli": "^2.120.5",
