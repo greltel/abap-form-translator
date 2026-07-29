@@ -1,18 +1,18 @@
 {
   "input_folder": "src",
   "input_filter": [
-      "zcl_form_translation.clas",
-      "zif_form_translation",
-      "zabap_form_trans_msg.msag",
-      "zabap_form_trans.tabl",
-      "zabap_form_drft.tabl",
-      "zabap_form_trans_name.dtel",
-      "zabap_form_trans_langu.dtel",
-      "zabap_form_trans_field.dtel",
-      "zabap_form_trans_descr.dtel",
-      "zabap_form_trans_maxlen.dtel",
-      "zabap_form_maxlength.doma"
-    ],
+    "zcl_form_translation.clas",
+    "zif_form_translation.intf",
+    "zabap_form_trans_msg.msag",
+    "zabap_form_trans.tabl",
+    "zabap_form_drft.tabl",
+    "zabap_form_trans_name.dtel",
+    "zabap_form_trans_langu.dtel",
+    "zabap_form_trans_field.dtel",
+    "zabap_form_trans_descr.dtel",
+    "zabap_form_trans_maxlen.dtel",
+    "zabap_form_maxlength.doma"
+  ],
   "output_folder": "output",
   "libs": [
     {
@@ -42,6 +42,7 @@
       {
         "object": "ZCL_FORM_TRANSLATION",
         "class": "LTC_GET_TRANSLATIONS",
+        "method": "CLASS_SETUP",
         "note": "cl_osql_test_environment is not supported in open-abap"
       }
     ]
