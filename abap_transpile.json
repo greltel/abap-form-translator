@@ -2,8 +2,7 @@
   "input_folder": "src",
   "input_filter": [
       "zcl_form_translation.clas",
-      "zcx_form_translation.clas",
-      "zif_form_translation_types.intf"
+      "zif_form_translation.intf"
     ]
   "output_folder": "output",
   "libs": [
