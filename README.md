@@ -52,7 +52,7 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 
 Part of the test suite runs outside the ABAP system, transpiled to
 JavaScript with [abaplint](https://abaplint.org), so every push is verified
-without a Steampunk tenant:
+without an SAP system:
 
     npm ci
     npm run lint
