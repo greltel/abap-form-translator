@@ -1,5 +1,8 @@
-CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
-  PRIVATE SECTION.
+"! Pure validation rules, free of any RAP, draft or persistence dependency so
+"! that they can be unit tested directly - no test doubles, no transactional
+"! buffer, no release-specific behavior.
+CLASS lcl_rules DEFINITION FINAL CREATE PRIVATE.
+  PUBLIC SECTION.
     CONSTANTS message_class         TYPE symsgid VALUE 'ZABAP_FORM_TRANS_MSG'.
 
     CONSTANTS msg_maxlength_invalid TYPE symsgno VALUE '001'.
@@ -10,16 +13,109 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
     CONSTANTS msg_text_truncated    TYPE symsgno VALUE '006'.
     CONSTANTS msg_key_not_upper     TYPE symsgno VALUE '007'.
 
+    " Upper bound of domain ZABAP_FORM_MAXLENGTH. Fixed values are only
+    " enforced on the UI, so the range has to be checked again on the server.
+    CONSTANTS max_length_limit      TYPE i       VALUE 9999.
+
+    TYPES: BEGIN OF translation_key,
+             formname    TYPE zabap_form_trans_name,
+             fieldname   TYPE zabap_form_trans_field,
+             languagekey TYPE zabap_form_trans_langu,
+           END OF translation_key.
+
+    TYPES translation_keys TYPE SORTED TABLE OF translation_key
+                           WITH NON-UNIQUE KEY formname fieldname languagekey.
+
+    "! MaxLength 0 means "no length limit" and stays legal.
+    "! @parameter maxlength |
+    "! @parameter result |
+    CLASS-METHODS is_maxlength_valid
+      IMPORTING maxlength     TYPE zabap_form_trans_maxlen
+      RETURNING VALUE(result) TYPE abap_boolean.
+
+    "! True when the description would be cut off at print time.
+    "! @parameter description |
+    "! @parameter maxlength |
+    "! @parameter result |
+    CLASS-METHODS is_text_truncated
+      IMPORTING !description  TYPE zabap_form_trans_descr
+                maxlength     TYPE zabap_form_trans_maxlen
+      RETURNING VALUE(result) TYPE abap_boolean.
+
+    "! LanguageKey is excluded on purpose: SAP language keys are case
+    "! significant and may legitimately be lower case.
+    "! @parameter formname |
+    "! @parameter fieldname |
+    "! @parameter result |
+    CLASS-METHODS is_key_upper_case
+      IMPORTING formname      TYPE zabap_form_trans_name
+                fieldname     TYPE zabap_form_trans_field
+      RETURNING VALUE(result) TYPE abap_boolean.
+
+    "! Returns the message number describing why a copy request is rejected,
+    "! or an initial value when the request is acceptable.
+    "! @parameter source_language |
+    "! @parameter target_language |
+    "! @parameter formname |
+    "! @parameter fieldname |
+    "! @parameter occupied |
+    "! @parameter result |
+    CLASS-METHODS check_copy_request
+      IMPORTING source_language TYPE zabap_form_trans_langu
+                target_language TYPE zabap_form_trans_langu
+                formname        TYPE zabap_form_trans_name
+                fieldname       TYPE zabap_form_trans_field
+                occupied        TYPE translation_keys
+      RETURNING VALUE(result)   TYPE symsgno.
+
+ENDCLASS.
+
+
+CLASS lcl_rules IMPLEMENTATION.
+  METHOD is_maxlength_valid.
+    result = xsdbool(     maxlength >= 0
+                      AND maxlength <= max_length_limit ).
+  ENDMETHOD.
+
+  METHOD is_text_truncated.
+    result = xsdbool(     maxlength             > 0
+                      AND strlen( description ) > maxlength ).
+  ENDMETHOD.
+
+  METHOD is_key_upper_case.
+    result = xsdbool(     formname  = to_upper( formname )
+                      AND fieldname = to_upper( fieldname ) ).
+  ENDMETHOD.
+
+  METHOD check_copy_request.
+    IF target_language IS INITIAL.
+      result = msg_language_missing.
+      RETURN.
+    ENDIF.
+
+    IF target_language = source_language.
+      result = msg_same_language.
+      RETURN.
+    ENDIF.
+
+    " Covers rows that are already persisted (active or draft) as well as rows
+    " queued earlier in the same batch - both end up in "occupied".
+    IF line_exists( occupied[ formname    = formname
+                              fieldname   = fieldname
+                              languagekey = target_language ] ).
+      result = msg_duplicate_key.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
+
+CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
+  PRIVATE SECTION.
     " State areas let the framework replace the messages of a previous validation
     " run instead of piling them up in the message popover on every Prepare.
-    CONSTANTS area_maxlength        TYPE string  VALUE 'MAXLENGTH'.
-    CONSTANTS area_description      TYPE string  VALUE 'DESCRIPTION'.
-    CONSTANTS area_unique_key       TYPE string  VALUE 'UNIQUE_KEY'.
-    CONSTANTS area_key_case         TYPE string  VALUE 'KEY_CASE'.
-
-    " Upper bound of domain ZABAP_FORM_MAXLENGTH. Fixed values are only enforced
-    " on the UI, so the same range has to be checked again on the server side.
-    CONSTANTS max_length_limit      TYPE i       VALUE 9999.
+    CONSTANTS area_maxlength   TYPE string VALUE 'MAXLENGTH'.
+    CONSTANTS area_description TYPE string VALUE 'DESCRIPTION'.
+    CONSTANTS area_unique_key  TYPE string VALUE 'UNIQUE_KEY'.
+    CONSTANTS area_key_case    TYPE string VALUE 'KEY_CASE'.
 
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       IMPORTING keys REQUEST requested_authorizations FOR translation RESULT result.
@@ -107,16 +203,15 @@ CLASS lhc_translation IMPLEMENTATION.
 
       " MaxLength = 0 is a valid value and means "no length limit"
       " (see ZCL_FORM_TRANSLATION, which only truncates when length > 0).
-      IF    translation-maxlength < 0
-         OR translation-maxlength > max_length_limit.
+      IF lcl_rules=>is_maxlength_valid( translation-maxlength ) = abap_false.
 
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
 
         APPEND VALUE #( %tky               = translation-%tky
                         %state_area        = area_maxlength
                         %element-maxlength = if_abap_behv=>mk-on
-                        %msg               = new_message( id       = message_class
-                                                          number   = msg_maxlength_invalid
+                        %msg               = new_message( id       = lcl_rules=>message_class
+                                                          number   = lcl_rules=>msg_maxlength_invalid
                                                           severity = if_abap_behv_message=>severity-error ) )
                TO reported-translation.
 
@@ -125,15 +220,15 @@ CLASS lhc_translation IMPLEMENTATION.
 
       " Non-blocking warning: at print time the description is truncated to
       " MaxLength, so warn the maintainer that text will be cut off.
-      IF     translation-maxlength             > 0
-         AND strlen( translation-description ) > translation-maxlength.
+      IF lcl_rules=>is_text_truncated( description = translation-description
+                                       maxlength   = translation-maxlength ) = abap_true.
 
         APPEND VALUE #( %tky                 = translation-%tky
                         %state_area          = area_maxlength
                         %element-description = if_abap_behv=>mk-on
                         %element-maxlength   = if_abap_behv=>mk-on
-                        %msg                 = new_message( id       = message_class
-                                                            number   = msg_text_truncated
+                        %msg                 = new_message( id       = lcl_rules=>message_class
+                                                            number   = lcl_rules=>msg_text_truncated
                                                             severity = if_abap_behv_message=>severity-warning
                                                             v1       = |{ translation-maxlength }| ) )
                TO reported-translation.
@@ -159,8 +254,8 @@ CLASS lhc_translation IMPLEMENTATION.
         APPEND VALUE #( %tky                 = translation-%tky
                         %state_area          = area_description
                         %element-description = if_abap_behv=>mk-on
-                        %msg                 = new_message( id       = message_class
-                                                            number   = msg_description_empty
+                        %msg                 = new_message( id       = lcl_rules=>message_class
+                                                            number   = lcl_rules=>msg_description_empty
                                                             severity = if_abap_behv_message=>severity-error ) )
                TO reported-translation.
       ENDIF.
@@ -191,10 +286,10 @@ CLASS lhc_translation IMPLEMENTATION.
 
         APPEND VALUE #( %tky        = translation-%tky
                         %state_area = area_unique_key
-                        %msg        = new_message( id       = message_class
-                                                   number   = msg_duplicate_key
+                        %msg        = new_message( id       = lcl_rules=>message_class
+                                                   number   = lcl_rules=>msg_duplicate_key
                                                    severity = if_abap_behv_message=>severity-error
-                                                   v1       = translation-LanguageKey ) )
+                                                   v1       = translation-languageKey ) )
                TO reported-translation.
       ENDIF.
 
@@ -216,8 +311,8 @@ CLASS lhc_translation IMPLEMENTATION.
       " lower case flag, so a key stored in lower case can never be found by
       " ZCL_FORM_TRANSLATION at print time. LanguageKey is excluded on purpose:
       " SAP language keys are case significant and may legitimately be lower case.
-      IF     translation-formname  = to_upper( translation-formname )
-         AND translation-fieldname = to_upper( translation-fieldname ).
+      IF lcl_rules=>is_key_upper_case( formname  = translation-formname
+                                       fieldname = translation-fieldname ) = abap_true.
         CONTINUE.
       ENDIF.
 
@@ -227,8 +322,8 @@ CLASS lhc_translation IMPLEMENTATION.
                       %state_area        = area_key_case
                       %element-formname  = if_abap_behv=>mk-on
                       %element-fieldname = if_abap_behv=>mk-on
-                      %msg               = new_message( id       = message_class
-                                                        number   = msg_key_not_upper
+                      %msg               = new_message( id       = lcl_rules=>message_class
+                                                        number   = lcl_rules=>msg_key_not_upper
                                                         severity = if_abap_behv_message=>severity-error ) )
              TO reported-translation.
 
@@ -287,52 +382,40 @@ CLASS lhc_translation IMPLEMENTATION.
     DATA(existing) = read_existing_targets( sources     = translations
                                             action_keys = keys ).
 
+    " Flatten the persisted targets into a plain key table; rows queued during
+    " this call are added to the same table so the in-batch collision case is
+    " handled by exactly the same rule.
+    DATA(occupied) = VALUE lcl_rules=>translation_keys( FOR row IN existing
+                                                        ( formname    = row-formname
+                                                          fieldname   = row-fieldname
+                                                          languagekey = row-languagekey ) ).
+
     DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
 
     LOOP AT translations INTO DATA(translation).
       DATA(action_key)      = keys[ %tky = translation-%tky ].
       DATA(target_language) = action_key-%param-TargetLanguage.
 
-      IF target_language IS INITIAL.
-        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
-        APPEND VALUE #( %tky = translation-%tky
-                        %msg = new_message( id       = message_class
-                                            number   = msg_language_missing
-                                            severity = if_abap_behv_message=>severity-error ) )
-               TO reported-translation.
-        CONTINUE.
-      ENDIF.
+      DATA(rejection) = lcl_rules=>check_copy_request( source_language = translation-languagekey
+                                                       target_language = target_language
+                                                       formname        = translation-formname
+                                                       fieldname       = translation-fieldname
+                                                       occupied        = occupied ).
 
-      IF target_language = translation-languagekey.
+      IF rejection IS NOT INITIAL.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
         APPEND VALUE #( %tky = translation-%tky
-                        %msg = new_message( id       = message_class
-                                            number   = msg_same_language
+                        %msg = new_message( id       = lcl_rules=>message_class
+                                            number   = rejection
                                             severity = if_abap_behv_message=>severity-error
                                             v1       = target_language ) )
                TO reported-translation.
         CONTINUE.
       ENDIF.
 
-      " Reject duplicates against already persisted rows (active or draft) as
-      " well as rows already queued in this same batch - two source rows sharing
-      " Form/Field copied to the same target language would otherwise collide on
-      " the primary key in the CREATE below.
-      IF    line_exists( existing[ formname    = translation-formname
-                                   fieldname   = translation-fieldname
-                                   languagekey = target_language ] )
-         OR line_exists( new_entries[ formname    = translation-formname
-                                      fieldname   = translation-fieldname
-                                      languagekey = target_language ] ).
-        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
-        APPEND VALUE #( %tky = translation-%tky
-                        %msg = new_message( id       = message_class
-                                            number   = msg_duplicate_key
-                                            severity = if_abap_behv_message=>severity-error
-                                            v1       = target_language ) )
-               TO reported-translation.
-        CONTINUE.
-      ENDIF.
+      INSERT VALUE #( formname    = translation-formname
+                      fieldname   = translation-fieldname
+                      languagekey = target_language ) INTO TABLE occupied.
 
       APPEND VALUE #( %cid        = action_key-%cid
                       formname    = translation-formname
