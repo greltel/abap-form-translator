@@ -1,7 +1,7 @@
 {
   "name": "abap-form-translator",
-  "version": "1.0.0",
-  "private": "true",
+  "version": "1.3.0",
+  "private": true,
   "description": "ABAP Form Translator off-stack execution",
   "scripts": {
     "test": "node remove-tests.mjs && rimraf output && abap_transpile && echo RUNNING && node output/index.mjs"
