@@ -14,7 +14,7 @@ CLASS zcl_form_translation DEFINITION
     "! <p class="shorttext synchronized">Translates fields of a structure based on DB configuration</p>
     "! @parameter formname        | <p class="shorttext synchronized">Smartform/Form Name (Key in DB)</p>
     "! @parameter langu           | <p class="shorttext synchronized">Target Language</p>
-    "! @parameter enable_fallback | <p class="shorttext synchronized">Fall back to the default language when a field has no text</p>
+    "! @parameter enable_fallback | <p class="shorttext synchronized">Fall back to the default language</p>
     "! @parameter form_elements   | <p class="shorttext synchronized">Structure containing fields to be translated</p>
     METHODS translate_form
       IMPORTING formname        TYPE zabap_form_trans_name

@@ -263,7 +263,7 @@ CLASS ltc_get_translations IMPLEMENTATION.
     DATA(result) = cut->read( formname = 'ZTEST' langu = 'D' ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'Rechnung'
-                                        act = result[ fieldname = 'TITLE' ]-descr ).
+                                        act = result[ KEY by_field fieldname = 'TITLE' ]-descr ).
   ENDMETHOD.
 
   METHOD test_fallback_fills_gap.
@@ -273,7 +273,7 @@ CLASS ltc_get_translations IMPLEMENTATION.
 
     " FOOTER exists in E only and must be served through the fallback.
     cl_abap_unit_assert=>assert_equals( exp = 'Thank you'
-                                        act = result[ fieldname = 'FOOTER' ]-descr ).
+                                        act = result[ KEY by_field fieldname = 'FOOTER' ]-descr ).
   ENDMETHOD.
 
   METHOD test_fallback_disabled.

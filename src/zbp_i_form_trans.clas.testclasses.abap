@@ -7,8 +7,9 @@ CLASS ltc_rules DEFINITION FINAL
     CONSTANTS form  TYPE zabap_form_trans_name  VALUE 'ZTEST'.
     CONSTANTS field TYPE zabap_form_trans_field VALUE 'TITLE'.
 
-    "! One target key already taken: ZTEST / TITLE / E.
-    "! @parameter result |
+    "! Builds an occupied set in which one target key is already taken.
+    "!
+    "! @parameter result | Single entry ZTEST / TITLE / E.
     METHODS occupied_with_english
       RETURNING VALUE(result) TYPE lcl_rules=>translation_keys.
 
@@ -155,16 +156,18 @@ CLASS ltc_form_trans DEFINITION FINAL
     METHODS setup.
     METHODS teardown.
 
-    "! Runs a CREATE through the full save sequence so the ON SAVE
+    "! Runs a CREATE through the full save sequence so that the ON SAVE
     "! validations are executed, and hands back their outcome.
+    "! Every parameter defaults to a valid row, so a test only has to override
+    "! the one value it wants to make invalid.
     "!
-    "! @parameter formname |
-    "! @parameter fieldname |
-    "! @parameter languagekey |
-    "! @parameter description |
-    "! @parameter maxlength |
-    "! @parameter failed |
-    "! @parameter reported |
+    "! @parameter formname    | Form key, defaults to a valid upper case name.
+    "! @parameter fieldname   | Field key, defaults to a valid upper case name.
+    "! @parameter languagekey | Language of the text, defaults to English.
+    "! @parameter description | Text to store, defaults to a non-empty value.
+    "! @parameter maxlength   | Length limit, defaults to 0 for no limit.
+    "! @parameter failed      | Instances rejected by the save sequence.
+    "! @parameter reported    | Messages raised by the save sequence.
     METHODS create_and_save
       IMPORTING formname     TYPE zabap_form_trans_name   DEFAULT 'ZTEST'
                 fieldname    TYPE zabap_form_trans_field  DEFAULT 'TITLE'

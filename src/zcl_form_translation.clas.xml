@@ -41,7 +41,7 @@
      <CMPNAME>TRANSLATE_FORM</CMPNAME>
      <SCONAME>ENABLE_FALLBACK</SCONAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Fall back to the default language when a field has no text</DESCRIPT>
+     <DESCRIPT>Fall back to the default language</DESCRIPT>
     </SEOSUBCOTX>
     <SEOSUBCOTX>
      <CMPNAME>TRANSLATE_FORM</CMPNAME>

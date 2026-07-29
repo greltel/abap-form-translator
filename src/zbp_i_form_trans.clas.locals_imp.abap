@@ -1,65 +1,101 @@
-"! Pure validation rules, free of any RAP, draft or persistence dependency so
-"! that they can be unit tested directly - no test doubles, no transactional
-"! buffer, no release-specific behavior.
+"! <p class="shorttext" lang="EN">Pure validation rules</p>
+"! Free of any RAP, draft or persistence dependency, so that every rule can be
+"! unit tested directly - no test doubles, no transactional buffer and no
+"! release specific behaviour.
+"! <br>
+"! The truncation rule deliberately mirrors {@link zcl_form_translation}, which
+"! cuts the description to MaxLength at print time.
 CLASS lcl_rules DEFINITION FINAL CREATE PRIVATE.
   PUBLIC SECTION.
+
+    "! T100 message class carrying all texts of this application.
     CONSTANTS message_class         TYPE symsgid VALUE 'ZABAP_FORM_TRANS_MSG'.
 
+    "! Maximum length must be between 0 and 9999.
     CONSTANTS msg_maxlength_invalid TYPE symsgno VALUE '001'.
+    "! Please enter a description.
     CONSTANTS msg_description_empty TYPE symsgno VALUE '002'.
+    "! A translation for language &amp;1 already exists.
     CONSTANTS msg_duplicate_key     TYPE symsgno VALUE '003'.
+    "! Please specify a target language.
     CONSTANTS msg_language_missing  TYPE symsgno VALUE '004'.
+    "! Cannot copy a translation to its own language &amp;1.
     CONSTANTS msg_same_language     TYPE symsgno VALUE '005'.
+    "! Description is longer than the maximum length &amp;1 and will be truncated.
     CONSTANTS msg_text_truncated    TYPE symsgno VALUE '006'.
+    "! Form and field names must be entered in upper case.
     CONSTANTS msg_key_not_upper     TYPE symsgno VALUE '007'.
 
-    " Upper bound of domain ZABAP_FORM_MAXLENGTH. Fixed values are only
-    " enforced on the UI, so the range has to be checked again on the server.
+    "! Upper bound of domain {@link DOMA:ZABAP_FORM_MAXLENGTH}. Its fixed values
+    "! are only enforced on the UI, so the range has to be checked again here
+    "! for requests arriving through OData or the EML API.
     CONSTANTS max_length_limit      TYPE i       VALUE 9999.
 
-    TYPES: BEGIN OF translation_key,
-             formname    TYPE zabap_form_trans_name,
-             fieldname   TYPE zabap_form_trans_field,
-             languagekey TYPE zabap_form_trans_langu,
-           END OF translation_key.
+    TYPES:
+      "! Identifies exactly one translation row.
+      BEGIN OF translation_key,
+        "! Form key, as passed to {@link zcl_form_translation}.
+        formname    TYPE zabap_form_trans_name,
+        "! Component name inside the caller structure.
+        fieldname   TYPE zabap_form_trans_field,
+        "! Language of the text.
+        languagekey TYPE zabap_form_trans_langu,
+      END OF translation_key.
 
+    "! Set of translation keys that are already taken. Non-unique on purpose:
+    "! the caller fills it from two separate reads, so duplicates can occur and
+    "! are harmless for the lookup.
     TYPES translation_keys TYPE SORTED TABLE OF translation_key
                            WITH NON-UNIQUE KEY formname fieldname languagekey.
 
-    "! MaxLength 0 means "no length limit" and stays legal.
-    "! @parameter maxlength |
-    "! @parameter result |
+    "! Checks MaxLength against the range of its domain.
+    "! A value of 0 means <em>no length limit</em> and stays legal.
+    "!
+    "! @parameter maxlength | Value to check.
+    "! @parameter result    | abap_true when the value is inside the range.
     CLASS-METHODS is_maxlength_valid
       IMPORTING maxlength     TYPE zabap_form_trans_maxlen
       RETURNING VALUE(result) TYPE abap_boolean.
 
-    "! True when the description would be cut off at print time.
-    "! @parameter description |
-    "! @parameter maxlength |
-    "! @parameter result |
+    "! Tells whether the description would be cut off at print time.
+    "! A MaxLength of 0 switches the limit off, so nothing is ever truncated.
+    "!
+    "! @parameter description | Text that will be printed.
+    "! @parameter maxlength   | Configured limit, 0 for no limit.
+    "! @parameter result      | abap_true when the text exceeds the limit.
     CLASS-METHODS is_text_truncated
       IMPORTING !description  TYPE zabap_form_trans_descr
                 maxlength     TYPE zabap_form_trans_maxlen
       RETURNING VALUE(result) TYPE abap_boolean.
 
-    "! LanguageKey is excluded on purpose: SAP language keys are case
-    "! significant and may legitimately be lower case.
-    "! @parameter formname |
-    "! @parameter fieldname |
-    "! @parameter result |
+    "! Tells whether the technical keys are stored in upper case.
+    "! HANA compares case sensitively and OData does not apply the DDIC lower
+    "! case flag, so a key stored in lower case can never be found by
+    "! {@link zcl_form_translation} at print time. LanguageKey is excluded on
+    "! purpose: SAP language keys are case significant and may legitimately be
+    "! lower case.
+    "!
+    "! @parameter formname  | Form key to check.
+    "! @parameter fieldname | Field key to check.
+    "! @parameter result    | abap_true when both keys are upper case.
     CLASS-METHODS is_key_upper_case
       IMPORTING formname      TYPE zabap_form_trans_name
                 fieldname     TYPE zabap_form_trans_field
       RETURNING VALUE(result) TYPE abap_boolean.
 
-    "! Returns the message number describing why a copy request is rejected,
-    "! or an initial value when the request is acceptable.
-    "! @parameter source_language |
-    "! @parameter target_language |
-    "! @parameter formname |
-    "! @parameter fieldname |
-    "! @parameter occupied |
-    "! @parameter result |
+    "! Decides whether one copy request is acceptable.
+    "! The rejection reasons are evaluated in a fixed order: missing target
+    "! language, copy onto the source language itself, and finally a target key
+    "! that is already taken.
+    "!
+    "! @parameter source_language | Language of the row being copied.
+    "! @parameter target_language | Language requested in the popup.
+    "! @parameter formname        | Form key of the row being copied.
+    "! @parameter fieldname       | Field key of the row being copied.
+    "! @parameter occupied        | Target keys that are already taken, both
+    "!                             persisted and queued within the same batch.
+    "! @parameter result          | Message number describing the rejection,
+    "!                             initial when the request is acceptable.
     CLASS-METHODS check_copy_request
       IMPORTING source_language TYPE zabap_form_trans_langu
                 target_language TYPE zabap_form_trans_langu
@@ -108,44 +144,92 @@ CLASS lcl_rules IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 
+
+"! <p class="shorttext" lang="EN">Behavior implementation for ZI_FORM_TRANS</p>
+"! Handles the ON SAVE validations, the instance features and the
+"! copyToLanguage factory action of {@link zi_form_trans}.
+"! <br>
+"! Every validation reports into its own state area, so the framework replaces
+"! the messages of a previous run instead of piling them up in the message
+"! popover on every Prepare. The rules themselves live in {@link .lcl_rules}
+"! and carry no RAP dependency.
 CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
-    " State areas let the framework replace the messages of a previous validation
-    " run instead of piling them up in the message popover on every Prepare.
+
+    "! State area of validateMaxLength.
     CONSTANTS area_maxlength   TYPE string VALUE 'MAXLENGTH'.
+    "! State area of validateDescription.
     CONSTANTS area_description TYPE string VALUE 'DESCRIPTION'.
+    "! State area of validateUniqueKey.
     CONSTANTS area_unique_key  TYPE string VALUE 'UNIQUE_KEY'.
+    "! State area of validateKeyCase.
     CONSTANTS area_key_case    TYPE string VALUE 'KEY_CASE'.
 
+    "! Grants the instance bound operations. Every caller that reaches the
+    "! entity is currently allowed to change it; a real check follows once the
+    "! authorization object is in place.
+    "!
+    "! @parameter keys                     | Instances under evaluation.
+    "! @parameter requested_authorizations | Operations the framework asks about.
+    "! @parameter result                   | Verdict per instance and operation.
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       IMPORTING keys REQUEST requested_authorizations FOR translation RESULT result.
 
+    "! Enables copyToLanguage only for rows that already carry a description,
+    "! so the button is not offered when it would copy nothing meaningful.
+    "!
+    "! @parameter keys               | Instances under evaluation.
+    "! @parameter requested_features | Features the framework asks about.
+    "! @parameter result             | Feature control per instance.
     METHODS get_instance_features FOR INSTANCE FEATURES
       IMPORTING keys REQUEST requested_features FOR translation RESULT result.
 
+    "! Rejects a MaxLength outside the domain range and warns, without
+    "! blocking, when the description would be truncated at print time.
+    "!
+    "! @parameter keys | Instances to validate.
     METHODS validatemaxlength FOR VALIDATE ON SAVE
       IMPORTING keys FOR translation~validatemaxlength.
 
+    "! Rejects rows without a description, since a translation without text
+    "! would silently leave the form label unchanged.
+    "!
+    "! @parameter keys | Instances to validate.
     METHODS validatedescription FOR VALIDATE ON SAVE
       IMPORTING keys FOR translation~validatedescription.
 
+    "! Rejects a key that is already persisted. Assigned to the create trigger
+    "! only, so a hit is always a real duplicate and never the row being edited.
+    "!
+    "! @parameter keys | Instances to validate.
     METHODS validateuniquekey FOR VALIDATE ON SAVE
       IMPORTING keys FOR translation~validateuniquekey.
 
+    "! Rejects technical keys that are not upper case, because such a row could
+    "! never be found by {@link zcl_form_translation} at print time.
+    "!
+    "! @parameter keys | Instances to validate.
     METHODS validatekeycase FOR VALIDATE ON SAVE
       IMPORTING keys FOR translation~validatekeycase.
 
+    "! Copies a translation into another language as a new draft row.
+    "!
+    "! @parameter keys | Action keys including the requested target language.
     METHODS copytolanguage FOR MODIFY
       IMPORTING keys FOR ACTION translation~copytolanguage.
 
+    "! Result set of a READ on {@link zi_form_trans}.
     TYPES translation_result TYPE TABLE FOR READ RESULT zi_form_trans.
+
+    "! Import parameter set of the copyToLanguage action.
     TYPES copy_action_keys   TYPE TABLE FOR ACTION IMPORT zi_form_trans~copytolanguage.
 
     "! Reads the translations that already occupy the requested target keys,
-    "! both in the active and in the draft persistence.
-    "! @parameter sources |
-    "! @parameter action_keys |
-    "! @parameter result |
+    "! in the active as well as in the draft persistence.
+    "!
+    "! @parameter sources     | Rows that are about to be copied.
+    "! @parameter action_keys | Action keys carrying the target language.
+    "! @parameter result      | Rows found under the requested target keys.
     METHODS read_existing_targets
       IMPORTING sources       TYPE translation_result
                 action_keys   TYPE copy_action_keys
@@ -289,7 +373,7 @@ CLASS lhc_translation IMPLEMENTATION.
                         %msg        = new_message( id       = lcl_rules=>message_class
                                                    number   = lcl_rules=>msg_duplicate_key
                                                    severity = if_abap_behv_message=>severity-error
-                                                   v1       = translation-languageKey ) )
+                                                   v1       = translation-languagekey ) )
                TO reported-translation.
       ENDIF.
 
@@ -337,7 +421,7 @@ CLASS lhc_translation IMPLEMENTATION.
     LOOP AT sources INTO DATA(source).
       " Empty target languages are reported by the caller (message 004); building
       " an empty key here is harmless because the reads below simply find nothing.
-      DATA(requested_language) = action_keys[ %tky = source-%tky ]-%param-TargetLanguage.
+      DATA(requested_language) = action_keys[ KEY id %tky = source-%tky ]-%param-TargetLanguage.
       APPEND VALUE #( %key-FormName    = source-formname
                       %key-FieldName   = source-fieldname
                       %key-LanguageKey = requested_language
@@ -393,7 +477,7 @@ CLASS lhc_translation IMPLEMENTATION.
     DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
 
     LOOP AT translations INTO DATA(translation).
-      DATA(action_key)      = keys[ %tky = translation-%tky ].
+      DATA(action_key)      = keys[ Key id %tky = translation-%tky ].
       DATA(target_language) = action_key-%param-TargetLanguage.
 
       DATA(rejection) = lcl_rules=>check_copy_request( source_language = translation-languagekey
