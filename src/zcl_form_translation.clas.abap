@@ -117,7 +117,7 @@ CLASS zcl_form_translation IMPLEMENTATION.
     TRY.
         language = COND #( WHEN langu IS NOT INITIAL
                            THEN langu
-                           ELSE cl_abap_context_info=>get_user_language_abap_format( ) ).
+                           ELSE xco_cp=>sy->language(  )->value ).
       CATCH cx_abap_context_info_error.
         " If the user language cannot be resolved, fall back to the default
         " language instead of silently returning no translations at all.
