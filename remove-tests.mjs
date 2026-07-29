@@ -5,11 +5,11 @@ const filePath = 'src/zcl_form_translation.clas.testclasses.abap';
 try {
   let code = fs.readFileSync(filePath, 'utf8');
 
-  // Αφαίρεση του DEFINITION
+  // REMOVE DEFINITION
   const defRegex = /CLASS\s+ltc_get_translations\s+DEFINITION[\s\S]*?ENDCLASS\./gi;
   code = code.replace(defRegex, '');
 
-  // Αφαίρεση του IMPLEMENTATION
+  // REMOVE IMPLEMENTATION
   const impRegex = /CLASS\s+ltc_get_translations\s+IMPLEMENTATION[\s\S]*?ENDCLASS\./gi;
   code = code.replace(impRegex, '');
 
