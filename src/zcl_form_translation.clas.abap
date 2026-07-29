@@ -136,11 +136,22 @@ CLASS zcl_form_translation IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    DATA language_filter TYPE RANGE OF zabap_form_trans-langu.
+
+    language_filter = VALUE #( sign   = 'I'
+                               option = 'EQ'
+                               ( low = language ) ).
+
+    IF use_fallback = abap_true.
+      APPEND VALUE #( sign   = 'I'
+                      option = 'EQ'
+                      low    = default_language ) TO language_filter.
+    ENDIF.
+
     SELECT FROM zabap_form_trans
       FIELDS form, fieldname, langu, descr, length
-      WHERE form = @form_key
-        AND (    langu = @language
-              OR ( langu = @default_language AND @use_fallback = @abap_true ) )
+      WHERE form  =  @form_key
+        AND langu IN @language_filter
       INTO TABLE @DATA(candidates).
 
     LOOP AT candidates REFERENCE INTO DATA(candidate).
