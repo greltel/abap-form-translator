@@ -37,6 +37,13 @@
     "ignoreSyntaxCheck": true,
     "addFilenames": true,
     "addCommonJS": true,
-    "unknownTypes": "runtimeError"
+    "unknownTypes": "runtimeError",
+    "skip": [
+      {
+        "object": "ZCL_FORM_TRANSLATION",
+        "class": "LTC_GET_TRANSLATIONS",
+        "note": "cl_osql_test_environment is not supported in open-abap"
+      }
+    ]
   }
 }
