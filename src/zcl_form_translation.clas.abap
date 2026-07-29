@@ -96,7 +96,7 @@ CLASS zcl_form_translation IMPLEMENTATION.
 
           <field_value> = text.
 
-        CATCH cx_root.
+        CATCH cx_sy_conversion_error.
 
       ENDTRY.
 

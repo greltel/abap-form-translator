@@ -3,6 +3,7 @@ strict ( 2 );
 use draft;
 
 define behavior for ZC_FORM_TRANS alias Translation
+  use etag
 {
   use create;
   use update;
@@ -14,4 +15,10 @@ define behavior for ZC_FORM_TRANS alias Translation
   use action Resume;
   use action Prepare;
   use action copyToLanguage;
+
+  side effects
+  {
+    action copyToLanguage affects $self;
+  }
+
 }
