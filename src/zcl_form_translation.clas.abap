@@ -80,7 +80,7 @@ CLASS zcl_form_translation IMPLEMENTATION.
 
       ASSIGN COMPONENT component_name OF STRUCTURE form_elements TO FIELD-SYMBOL(<field_value>).
 
-      IF NOT ( syst-subrc IS INITIAL AND <field_value> IS ASSIGNED ).
+      IF NOT ( sy-subrc IS INITIAL AND <field_value> IS ASSIGNED ).
         CONTINUE.
       ENDIF.
 
@@ -131,7 +131,7 @@ CLASS zcl_form_translation IMPLEMENTATION.
           WITH KEY formname     = form_key
                    langu        = language
                    use_fallback = use_fallback.
-    IF syst-subrc IS INITIAL AND <cached> IS ASSIGNED.
+    IF sy-subrc IS INITIAL AND <cached> IS ASSIGNED.
       result = <cached>-translations.
       RETURN.
     ENDIF.
@@ -149,7 +149,7 @@ CLASS zcl_form_translation IMPLEMENTATION.
               WITH KEY by_field
               COMPONENTS fieldname = candidate->fieldname.
 
-      IF syst-subrc IS INITIAL AND <existing> IS ASSIGNED.
+      IF sy-subrc IS INITIAL AND <existing> IS ASSIGNED.
         IF     <existing>-langu = default_language
            AND candidate->langu = language.
           <existing> = candidate->*.
