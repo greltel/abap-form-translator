@@ -1,26 +1,26 @@
 "! <p class="shorttext synchronized">Form Translation Class</p>
+"! Default implementation of {@link zif_form_translation}, reading the texts
+"! from ZABAP_FORM_TRANS through a process wide static buffer.
+"! <br>
+"! The database read lives in the protected get_translations rather than behind
+"! an injected reader interface - a deliberate trade off to keep the object
+"! count of the package minimal. Tests substitute it by subclassing, which is
+"! also why this class is not FINAL.
 CLASS zcl_form_translation DEFINITION
   PUBLIC
   CREATE PUBLIC.
 
   PUBLIC SECTION.
+    INTERFACES zif_form_translation.
+
+    ALIASES translate_form FOR zif_form_translation~translate_form.
+
     CONSTANTS version TYPE string VALUE '1.3.0' ##NEEDED.
 
     "! <p class="shorttext synchronized">Invalidates the in-memory translation buffer</p>
-    "! <p>Call this after maintaining translations in a long-living session
-    "! (mass print / batch / job server) so hot-swapped texts take effect.</p>
+    "! Call this after maintaining translations in a long living session
+    "! (mass print / batch / job server) so hot swapped texts take effect.
     CLASS-METHODS clear_buffer.
-
-    "! <p class="shorttext synchronized">Translates fields of a structure based on DB configuration</p>
-    "! @parameter formname        | <p class="shorttext synchronized">Smartform/Form Name (Key in DB)</p>
-    "! @parameter langu           | <p class="shorttext synchronized">Target Language</p>
-    "! @parameter enable_fallback | <p class="shorttext synchronized">Fall back to the default language</p>
-    "! @parameter form_elements   | <p class="shorttext synchronized">Structure containing fields to be translated</p>
-    METHODS translate_form
-      IMPORTING formname        TYPE zabap_form_trans_name
-                langu           TYPE zabap_form_trans_langu OPTIONAL
-                enable_fallback TYPE abap_boolean           DEFAULT abap_true
-      CHANGING  form_elements   TYPE any.
 
   PROTECTED SECTION.
     CONSTANTS default_language TYPE spras VALUE 'E'.
@@ -57,7 +57,7 @@ ENDCLASS.
 
 
 CLASS zcl_form_translation IMPLEMENTATION.
-  METHOD translate_form.
+  METHOD zif_form_translation~translate_form.
     IF formname IS INITIAL.
       RETURN.
     ENDIF.

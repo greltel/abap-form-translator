@@ -18,11 +18,6 @@
      <LANGU>E</LANGU>
      <DESCRIPT>Invalidates the in-memory translation buffer</DESCRIPT>
     </SEOCOMPOTX>
-    <SEOCOMPOTX>
-     <CMPNAME>TRANSLATE_FORM</CMPNAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Translates fields of a structure based on DB configuration</DESCRIPT>
-    </SEOCOMPOTX>
    </DESCRIPTIONS>
    <DESCRIPTIONS_SUB>
     <SEOSUBCOTX>
@@ -36,30 +31,6 @@
      <SCONAME>LANGU</SCONAME>
      <LANGU>E</LANGU>
      <DESCRIPT>ABAP System Field: Language Key of Text Environment</DESCRIPT>
-    </SEOSUBCOTX>
-    <SEOSUBCOTX>
-     <CMPNAME>TRANSLATE_FORM</CMPNAME>
-     <SCONAME>ENABLE_FALLBACK</SCONAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Fall back to the default language</DESCRIPT>
-    </SEOSUBCOTX>
-    <SEOSUBCOTX>
-     <CMPNAME>TRANSLATE_FORM</CMPNAME>
-     <SCONAME>FORMNAME</SCONAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Smartform/Form Name (Key in DB)</DESCRIPT>
-    </SEOSUBCOTX>
-    <SEOSUBCOTX>
-     <CMPNAME>TRANSLATE_FORM</CMPNAME>
-     <SCONAME>FORM_ELEMENTS</SCONAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Structure containing fields to be translated</DESCRIPT>
-    </SEOSUBCOTX>
-    <SEOSUBCOTX>
-     <CMPNAME>TRANSLATE_FORM</CMPNAME>
-     <SCONAME>LANGU</SCONAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Target Language</DESCRIPT>
     </SEOSUBCOTX>
    </DESCRIPTIONS_SUB>
   </asx:values>

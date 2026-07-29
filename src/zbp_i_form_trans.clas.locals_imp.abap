@@ -357,8 +357,12 @@ CLASS lhc_translation IMPLEMENTATION.
       APPEND VALUE #( %tky        = translation-%tky
                       %state_area = area_unique_key ) TO reported-translation.
 
-      " Only reached for the create trigger, so an active row with the same key
-      " is always a real duplicate and never the instance being edited.
+      " Deliberate exception to the "no SELECT in a handler" rule: READ ENTITIES
+      " IN LOCAL MODE reads the transactional buffer, which during save already
+      " contains the very instance being created - it would always report itself
+      " as a duplicate. This check must see the persisted state only.
+      " Only reached for the create trigger, so a hit is always a real duplicate
+      " and never the instance being edited.
       SELECT SINGLE @abap_true FROM zabap_form_trans
         WHERE form      = @translation-formname
           AND fieldname = @translation-fieldname
