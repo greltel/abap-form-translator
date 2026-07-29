@@ -12,7 +12,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
      <MSGNR>001</MSGNR>
-     <TEXT>Maximum length must not be negative</TEXT>
+     <TEXT>Maximum length must be between 0 and 9999</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
@@ -49,6 +49,18 @@
      <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
      <MSGNR>007</MSGNR>
      <TEXT>Form and field names must be entered in upper case</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>You are not authorized to create form translations</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>You are not authorized to change or delete form translations</TEXT>
     </T100>
    </T100>
   </asx:values>

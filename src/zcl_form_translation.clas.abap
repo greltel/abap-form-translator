@@ -4,7 +4,7 @@ CLASS zcl_form_translation DEFINITION
   CREATE PUBLIC.
 
   PUBLIC SECTION.
-    CONSTANTS version TYPE string VALUE '1.2.0' ##NEEDED.
+    CONSTANTS version TYPE string VALUE '1.3.0' ##NEEDED.
 
     "! <p class="shorttext synchronized">Invalidates the in-memory translation buffer</p>
     "! <p>Call this after maintaining translations in a long-living session
@@ -12,9 +12,10 @@ CLASS zcl_form_translation DEFINITION
     CLASS-METHODS clear_buffer.
 
     "! <p class="shorttext synchronized">Translates fields of a structure based on DB configuration</p>
-    "! @parameter formname      | <p class="shorttext synchronized">Smartform/Form Name (Key in DB)</p>
-    "! @parameter langu         | <p class="shorttext synchronized">Target Language</p>
-    "! @parameter form_elements | <p class="shorttext synchronized">Structure containing fields to be translated</p>
+    "! @parameter formname        | <p class="shorttext synchronized">Smartform/Form Name (Key in DB)</p>
+    "! @parameter langu           | <p class="shorttext synchronized">Target Language</p>
+    "! @parameter enable_fallback | <p class="shorttext synchronized">Fall back to the default language when a field has no text</p>
+    "! @parameter form_elements   | <p class="shorttext synchronized">Structure containing fields to be translated</p>
     METHODS translate_form
       IMPORTING formname        TYPE zabap_form_trans_name
                 langu           TYPE zabap_form_trans_langu OPTIONAL

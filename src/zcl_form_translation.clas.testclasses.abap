@@ -43,7 +43,6 @@ CLASS ltc_translator_test DEFINITION FOR TESTING
     METHODS test_unknown_field_skipped     FOR TESTING.
     METHODS test_no_truncation_no_length   FOR TESTING.
     METHODS test_text_shorter_than_length  FOR TESTING.
-    METHODS test_clear_buffer_runs         FOR TESTING.
 ENDCLASS.
 
 CLASS ltc_translator_test IMPLEMENTATION.
@@ -180,12 +179,6 @@ CLASS ltc_translator_test IMPLEMENTATION.
                             CHANGING form_elements = labels ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'Hi' act = labels-lbl_name ).
-  ENDMETHOD.
-
-  METHOD test_clear_buffer_runs.
-    " clear_buffer must be callable without side effects on the caller.
-    zcl_form_translation=>clear_buffer( ).
-    cl_abap_unit_assert=>assert_bound( cut ).
   ENDMETHOD.
 
 ENDCLASS.

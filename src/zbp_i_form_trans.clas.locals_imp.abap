@@ -1,28 +1,25 @@
 CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
+    CONSTANTS message_class         TYPE symsgid VALUE 'ZABAP_FORM_TRANS_MSG'.
 
-    CONSTANTS message_class TYPE symsgid VALUE 'ZABAP_FORM_TRANS_MSG'.
-
-    CONSTANTS: msg_maxlength_invalid TYPE symsgno VALUE '001',
-               msg_description_empty TYPE symsgno VALUE '002',
-               msg_duplicate_key     TYPE symsgno VALUE '003',
-               msg_language_missing  TYPE symsgno VALUE '004',
-               msg_same_language     TYPE symsgno VALUE '005',
-               msg_text_truncated    TYPE symsgno VALUE '006',
-               msg_key_not_upper     TYPE symsgno VALUE '007'.
+    CONSTANTS msg_maxlength_invalid TYPE symsgno VALUE '001'.
+    CONSTANTS msg_description_empty TYPE symsgno VALUE '002'.
+    CONSTANTS msg_duplicate_key     TYPE symsgno VALUE '003'.
+    CONSTANTS msg_language_missing  TYPE symsgno VALUE '004'.
+    CONSTANTS msg_same_language     TYPE symsgno VALUE '005'.
+    CONSTANTS msg_text_truncated    TYPE symsgno VALUE '006'.
+    CONSTANTS msg_key_not_upper     TYPE symsgno VALUE '007'.
 
     " State areas let the framework replace the messages of a previous validation
     " run instead of piling them up in the message popover on every Prepare.
-    CONSTANTS: area_maxlength   TYPE string VALUE 'MAXLENGTH',
-               area_description TYPE string VALUE 'DESCRIPTION',
-               area_unique_key  TYPE string VALUE 'UNIQUE_KEY',
-               area_key_case    TYPE string VALUE 'KEY_CASE'.
+    CONSTANTS area_maxlength        TYPE string  VALUE 'MAXLENGTH'.
+    CONSTANTS area_description      TYPE string  VALUE 'DESCRIPTION'.
+    CONSTANTS area_unique_key       TYPE string  VALUE 'UNIQUE_KEY'.
+    CONSTANTS area_key_case         TYPE string  VALUE 'KEY_CASE'.
 
     " Upper bound of domain ZABAP_FORM_MAXLENGTH. Fixed values are only enforced
     " on the UI, so the same range has to be checked again on the server side.
-    CONSTANTS max_length_limit TYPE i VALUE 9999.
-
-    CLASS-DATA cid_counter TYPE i.
+    CONSTANTS max_length_limit      TYPE i       VALUE 9999.
 
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       IMPORTING keys REQUEST requested_authorizations FOR translation RESULT result.
@@ -50,6 +47,9 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     "! Reads the translations that already occupy the requested target keys,
     "! both in the active and in the draft persistence.
+    "! @parameter sources |
+    "! @parameter action_keys |
+    "! @parameter result |
     METHODS read_existing_targets
       IMPORTING sources       TYPE translation_result
                 action_keys   TYPE copy_action_keys
@@ -143,7 +143,6 @@ CLASS lhc_translation IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD validatedescription.
-
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          FIELDS ( description ) WITH CORRESPONDING #( keys )
@@ -169,7 +168,6 @@ CLASS lhc_translation IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD validateuniquekey.
-
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          FIELDS ( formname fieldname languagekey ) WITH CORRESPONDING #( keys )
@@ -196,7 +194,7 @@ CLASS lhc_translation IMPLEMENTATION.
                         %msg        = new_message( id       = message_class
                                                    number   = msg_duplicate_key
                                                    severity = if_abap_behv_message=>severity-error
-                                                   v1       = translation-languagekey ) )
+                                                   v1       = translation-LanguageKey ) )
                TO reported-translation.
       ENDIF.
 
@@ -204,7 +202,6 @@ CLASS lhc_translation IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD validatekeycase.
-
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
          ENTITY translation
          FIELDS ( formname fieldname ) WITH CORRESPONDING #( keys )
@@ -219,26 +216,26 @@ CLASS lhc_translation IMPLEMENTATION.
       " lower case flag, so a key stored in lower case can never be found by
       " ZCL_FORM_TRANSLATION at print time. LanguageKey is excluded on purpose:
       " SAP language keys are case significant and may legitimately be lower case.
-      IF    translation-formname  <> to_upper( translation-formname )
-         OR translation-fieldname <> to_upper( translation-fieldname ).
-
-        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
-
-        APPEND VALUE #( %tky               = translation-%tky
-                        %state_area        = area_key_case
-                        %element-formname  = if_abap_behv=>mk-on
-                        %element-fieldname = if_abap_behv=>mk-on
-                        %msg               = new_message( id       = message_class
-                                                          number   = msg_key_not_upper
-                                                          severity = if_abap_behv_message=>severity-error ) )
-               TO reported-translation.
+      IF     translation-formname  = to_upper( translation-formname )
+         AND translation-fieldname = to_upper( translation-fieldname ).
+        CONTINUE.
       ENDIF.
+
+      APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+
+      APPEND VALUE #( %tky               = translation-%tky
+                      %state_area        = area_key_case
+                      %element-formname  = if_abap_behv=>mk-on
+                      %element-fieldname = if_abap_behv=>mk-on
+                      %msg               = new_message( id       = message_class
+                                                        number   = msg_key_not_upper
+                                                        severity = if_abap_behv_message=>severity-error ) )
+             TO reported-translation.
 
     ENDLOOP.
   ENDMETHOD.
 
   METHOD read_existing_targets.
-
     DATA active_keys TYPE TABLE FOR READ IMPORT zi_form_trans.
     DATA draft_keys  TYPE TABLE FOR READ IMPORT zi_form_trans.
 
@@ -268,11 +265,9 @@ CLASS lhc_translation IMPLEMENTATION.
          RESULT DATA(existing_draft).
 
     APPEND LINES OF existing_draft TO result.
-
   ENDMETHOD.
 
   METHOD copytolanguage.
-
     " Keys that cannot be read must be reported as failed, otherwise the action
     " silently reports success while having copied nothing.
     READ ENTITIES OF zi_form_trans IN LOCAL MODE
@@ -295,7 +290,8 @@ CLASS lhc_translation IMPLEMENTATION.
     DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
 
     LOOP AT translations INTO DATA(translation).
-      DATA(target_language) = keys[ %tky = translation-%tky ]-%param-TargetLanguage.
+      DATA(action_key)      = keys[ %tky = translation-%tky ].
+      DATA(target_language) = action_key-%param-TargetLanguage.
 
       IF target_language IS INITIAL.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
@@ -338,9 +334,7 @@ CLASS lhc_translation IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
-      cid_counter += 1.
-
-      APPEND VALUE #( %cid        = |CTL{ cid_counter }|
+      APPEND VALUE #( %cid        = action_key-%cid
                       formname    = translation-formname
                       fieldname   = translation-fieldname
                       languagekey = target_language
@@ -370,5 +364,4 @@ CLASS lhc_translation IMPLEMENTATION.
     reported-translation = VALUE #( BASE reported-translation
                                     ( LINES OF reported_create-translation ) ).
   ENDMETHOD.
-
 ENDCLASS.

@@ -12,6 +12,7 @@
     <FIXPT>X</FIXPT>
     <UNICODE>X</UNICODE>
     <CLSDEFINT>ZI_FORM_TRANS</CLSDEFINT>
+    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
    </VSEOCLASS>
   </asx:values>
  </asx:abap>
