@@ -1,8 +1,10 @@
 {
   "input_folder": "src",
   "input_filter": [
-    "zcl_form_translation.clas"
-  ],
+      "zcl_form_translation.clas",
+      "zcx_form_translation.clas",
+      "zif_form_translation_types.intf"
+    ]
   "output_folder": "output",
   "libs": [
     {
