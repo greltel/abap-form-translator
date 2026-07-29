@@ -7,6 +7,7 @@
 [![ABAP Version](https://img.shields.io/badge/ABAP-7.57%2B-blue )](https://abaplint.app/stats/greltel/abap-form-translator/statement_compatibility)
 [![Code Statistics](https://img.shields.io/badge/CodeStatistics-abaplint-blue)](https://abaplint.app/stats/greltel/abap-form-translator)
 [![License](https://img.shields.io/badge/License-MIT-green)](https://github.com/greltel/abap-form-translator/blob/main/LICENSE)
+[![Tests](https://github.com/greltel/abap-form-translator/actions/workflows/test_main.yml/badge.svg)](https://github.com/greltel/abap-form-translator/actions/workflows/test_main.yml)
 ![Version](https://img.shields.io/endpoint?url=https://shield.abappm.com/github/greltel/abap-form-translator/src/zcl_form_translation.clas.abap/version)
 
 A lightweight, dynamic **runtime translation tool** for SAP forms.
@@ -46,6 +47,21 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 * Install via [ABAPGit](http://abapgit.org)
 * ABAP Cloud/Clean Core compatibility.Passed SCI check variant S4HANA_READINESS_2023 and ABAP_CLOUD_READINESS
 * Unit Tested
+
+## Running the tests off-stack
+
+Part of the test suite runs outside the ABAP system, transpiled to
+JavaScript with [abaplint](https://abaplint.org), so every push is verified
+without a Steampunk tenant:
+
+    npm ci
+    npm run lint
+    npm test
+
+This covers `ZCL_FORM_TRANSLATION` (RTTI mapping, language fallback, buffer)
+and `ZCL_FORM_TRANS_RULES` (validation rules). 30 unit tests, backed by an
+in-memory SQLite database so the SELECT and `CL_OSQL_TEST_ENVIRONMENT`
+behave as they do in the system.
 
 ## Usage
 
