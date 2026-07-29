@@ -37,63 +37,6 @@
     "ignoreSyntaxCheck": true,
     "addFilenames": true,
     "addCommonJS": true,
-    "unknownTypes": "runtimeError",
-    "skip": [
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "CLASS_SETUP"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "CLASS_TEARDOWN"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "SETUP"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "GIVEN_STANDARD_ROWS"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "GIVEN_BOTH_LANGS_THEN_TARGET"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "GIVEN_GAP_THEN_DEFAULT_LANG"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "GIVEN_NO_FALLBACK_THEN_1_ROW"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "GIVEN_2ND_CALL_THEN_BUFFERED"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "GIVEN_NO_ROWS_THEN_CACHED"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "GIVEN_CLEARED_THEN_RELOADS"
-      },
-      {
-        "object": "ZCL_FORM_TRANSLATION",
-        "class": "LTC_GET_TRANSLATIONS",
-        "method": "GIVEN_LOWER_FORM_THEN_FOUND"
-      }
-    ]
+    "unknownTypes": "runtimeError"
   }
 }
