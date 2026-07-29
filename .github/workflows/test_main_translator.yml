@@ -1,4 +1,4 @@
-name: test_translator_class
+name: test_translator
 
 on:
   push:
