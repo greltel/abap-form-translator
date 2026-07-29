@@ -42,6 +42,7 @@
       {
         "object": "ZCL_FORM_TRANSLATION",
         "class": "LTC_GET_TRANSLATIONS",
+        "method": "*",
         "note": "cl_osql_test_environment is not supported in open-abap"
       }
     ]
