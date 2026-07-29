@@ -344,9 +344,12 @@ CLASS ltc_get_translations IMPLEMENTATION.
     DATA(result) = cut->read( formname = 'ZTEST' langu = 'D' ).
 
     " --- ASSERT
+    READ TABLE result ASSIGNING FIELD-SYMBOL(<title_row>)
+      WITH KEY by_field COMPONENTS fieldname = 'TITLE'.
+
     cl_abap_unit_assert=>assert_equals(
         exp = 'Rechnung'
-        act = result[ KEY by_field fieldname = 'TITLE' ]-descr
+        act = <title_row>-descr
         msg = 'When both languages exist the target language must win' ).
   ENDMETHOD.
 
@@ -358,9 +361,12 @@ CLASS ltc_get_translations IMPLEMENTATION.
     DATA(result) = cut->read( formname = 'ZTEST' langu = 'D' ).
 
     " --- ASSERT
+    READ TABLE result ASSIGNING FIELD-SYMBOL(<footer_row>)
+      WITH KEY by_field COMPONENTS fieldname = 'FOOTER'.
+
     cl_abap_unit_assert=>assert_equals(
         exp = 'Thank you'
-        act = result[ KEY by_field fieldname = 'FOOTER' ]-descr
+        act = <footer_row>-descr
         msg = 'A field missing in the target language must fall back to English' ).
   ENDMETHOD.
 
