@@ -70,13 +70,13 @@ CLASS zcl_form_translation IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    LOOP AT translations REFERENCE INTO DATA(translation).
+    LOOP AT translations ASSIGNING FIELD-SYMBOL(<translation>).
 
-      IF translation->*-descr IS INITIAL.
+      IF <translation>-descr IS INITIAL.
         CONTINUE.
       ENDIF.
 
-      DATA(component_name) = to_upper( translation->*-fieldname ).
+      DATA(component_name) = to_upper( <translation>-fieldname ).
 
       ASSIGN COMPONENT component_name OF STRUCTURE form_elements TO FIELD-SYMBOL(<field_value>).
 
@@ -86,12 +86,12 @@ CLASS zcl_form_translation IMPLEMENTATION.
 
       TRY.
 
-          DATA(text) = translation->*-descr.
+          DATA(text) = <translation>-descr.
 
-          IF translation->*-length IS NOT INITIAL AND strlen( text ) > translation->*-length.
+          IF <translation>-length IS NOT INITIAL AND strlen( text ) > <translation>-length.
             text = substring( val = text
                               off = 0
-                              len = translation->*-length ).
+                              len = <translation>-length ).
           ENDIF.
 
           <field_value> = text.
