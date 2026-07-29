@@ -127,9 +127,10 @@ CLASS zcl_form_translation IMPLEMENTATION.
     DATA(use_fallback) = xsdbool(     language        <> default_language
                                   AND enable_fallback  = abap_true ).
 
-    ASSIGN buffer[ formname     = form_key
+    READ TABLE buffer ASSIGNING FIELD-SYMBOL(<cached>)
+          WITH KEY formname     = form_key
                    langu        = language
-                   use_fallback = use_fallback ] TO FIELD-SYMBOL(<cached>).
+                   use_fallback = use_fallback.
     IF syst-subrc IS INITIAL AND <cached> IS ASSIGNED.
       result = <cached>-translations.
       RETURN.
@@ -144,8 +145,9 @@ CLASS zcl_form_translation IMPLEMENTATION.
 
     LOOP AT candidates REFERENCE INTO DATA(candidate).
 
-      ASSIGN result[ KEY by_field
-                     fieldname = candidate->fieldname ] TO FIELD-SYMBOL(<existing>).
+      READ TABLE result ASSIGNING FIELD-SYMBOL(<existing>)
+              WITH KEY by_field
+              COMPONENTS fieldname = candidate->fieldname.
 
       IF syst-subrc IS INITIAL AND <existing> IS ASSIGNED.
         IF     <existing>-langu = default_language
