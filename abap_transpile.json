@@ -11,7 +11,8 @@
     "zabap_form_trans_field.dtel",
     "zabap_form_trans_descr.dtel",
     "zabap_form_trans_maxlen.dtel",
-    "zabap_form_maxlength.doma"
+    "zabap_form_maxlength.doma",
+    "zcl_form_trans_rules.clas"
   ],
   "output_folder": "output",
   "libs": [
