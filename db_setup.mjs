@@ -6,4 +6,5 @@ export async function setupDatabase(abap, schemas, insert) {
   await client.execute(schemas.sqlite);
   await client.execute(insert);
   abap.context.databaseConnections["DEFAULT"] = client;
+  abap.builtin.sy.get().dbsys.set("sqlite");
 }
