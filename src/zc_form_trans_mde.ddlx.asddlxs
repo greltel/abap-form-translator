@@ -42,8 +42,13 @@ annotate view ZC_FORM_TRANS with
 
   @UI.fieldGroup: [ { qualifier: 'TechGrp', position: 30 } ]
   @UI.identification: [ { type: #FOR_ACTION, dataAction: 'copyToLanguage', label: 'Copy Language' } ]
+  // invocationGrouping is only meaningful on the list report button, which is the
+  // one that can be pressed for several rows at once. Without it every selected
+  // row is executed in its own change set, so a row that succeeds is committed
+  // even when a sibling row of the same field fails.
   @UI.lineItem: [ { position: 30 },
-                  { type: #FOR_ACTION, dataAction: 'copyToLanguage', label: 'Copy Language' } ]
+                  { type: #FOR_ACTION, dataAction: 'copyToLanguage', label: 'Copy Language',
+                    invocationGrouping: #CHANGE_SET } ]
   @UI.selectionField: [ { position: 30 } ]
   @UI.textArrangement: #TEXT_FIRST
   LanguageKey;

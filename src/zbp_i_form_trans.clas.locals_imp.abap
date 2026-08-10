@@ -88,6 +88,31 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
                 action_keys   TYPE copy_action_keys
       RETURNING VALUE(result) TYPE translation_result.
 
+    "! Pairs every selected row with the target language requested for it, so
+    "! that the ambiguity rule can look at the whole batch before the first row
+    "! is processed.
+    "!
+    "! @parameter sources     | Rows that are about to be copied.
+    "! @parameter action_keys | Action keys carrying the target language.
+    "! @parameter result      | One request per selected row.
+    METHODS build_copy_requests
+      IMPORTING sources       TYPE translation_result
+                action_keys   TYPE copy_action_keys
+      RETURNING VALUE(result) TYPE zcl_form_trans_rules=>copy_requests.
+
+    "! Formats a language key the way the rest of the app shows it.
+    "! ZABAP_FORM_TRANS_LANGU carries the ISOLA conversion exit, which the T100
+    "! message system does not apply: a message variable reads "G" where every
+    "! list and popup of the app reads "EL".
+    "!
+    "! @parameter language | Internal SAP language key.
+    "! @parameter result   | ISO code, falling back to the internal key when it
+    "!                       cannot be resolved - a readable message matters
+    "!                       less than a message that appears at all.
+    METHODS language_code
+      IMPORTING language      TYPE zabap_form_trans_langu
+      RETURNING VALUE(result) TYPE symsgv.
+
 ENDCLASS.
 
 
@@ -98,16 +123,16 @@ CLASS lhc_translation IMPLEMENTATION.
         ( %tky                   = key-%tky
           %update                = COND #( WHEN requested_authorizations-%update = if_abap_behv=>mk-on
                                            THEN if_abap_behv=>auth-allowed )
-          %action-Edit           = COND #( WHEN requested_authorizations-%action-Edit = if_abap_behv=>mk-on
+          %action-edit           = COND #( WHEN requested_authorizations-%action-edit = if_abap_behv=>mk-on
                                            THEN if_abap_behv=>auth-allowed )
-          %action-copyToLanguage = COND #( WHEN requested_authorizations-%action-copyToLanguage = if_abap_behv=>mk-on
+          %action-copytolanguage = COND #( WHEN requested_authorizations-%action-copytolanguage = if_abap_behv=>mk-on
                                            THEN if_abap_behv=>auth-allowed )
           %delete                = COND #( WHEN requested_authorizations-%delete = if_abap_behv=>mk-on
                                            THEN if_abap_behv=>auth-allowed ) ) ).
   ENDMETHOD.
 
   METHOD get_instance_features.
-    IF requested_features-%action-copyToLanguage = if_abap_behv=>mk-off.
+    IF requested_features-%action-copytolanguage = if_abap_behv=>mk-off.
       RETURN.
     ENDIF.
 
@@ -121,7 +146,7 @@ CLASS lhc_translation IMPLEMENTATION.
     " when it would just fail or copy nothing meaningful.
     result = VALUE #( FOR translation IN translations
                       ( %tky                   = translation-%tky
-                        %action-copyToLanguage = COND #( WHEN translation-description IS NOT INITIAL
+                        %action-copytolanguage = COND #( WHEN translation-description IS NOT INITIAL
                                                          THEN if_abap_behv=>fc-o-enabled
                                                          ELSE if_abap_behv=>fc-o-disabled ) ) ).
   ENDMETHOD.
@@ -158,7 +183,7 @@ CLASS lhc_translation IMPLEMENTATION.
       " Non-blocking warning: at print time the description is truncated to
       " MaxLength, so warn the maintainer that text will be cut off.
       IF zcl_form_trans_rules=>is_text_truncated( description = translation-description
-                                       maxlength   = translation-maxlength ) = abap_true.
+                                                  maxlength   = translation-maxlength ) = abap_true.
 
         APPEND VALUE #( %tky                 = translation-%tky
                         %state_area          = area_maxlength
@@ -230,7 +255,7 @@ CLASS lhc_translation IMPLEMENTATION.
                         %msg        = new_message( id       = zcl_form_trans_rules=>message_class
                                                    number   = zcl_form_trans_rules=>msg_duplicate_key
                                                    severity = if_abap_behv_message=>severity-error
-                                                   v1       = translation-languagekey ) )
+                                                   v1       = language_code( translation-languagekey ) ) )
                TO reported-translation.
       ENDIF.
 
@@ -253,7 +278,7 @@ CLASS lhc_translation IMPLEMENTATION.
       " ZCL_FORM_TRANSLATION at print time. LanguageKey is excluded on purpose:
       " SAP language keys are case significant and may legitimately be lower case.
       IF zcl_form_trans_rules=>is_key_upper_case( formname  = translation-formname
-                                       fieldname = translation-fieldname ) = abap_true.
+                                                  fieldname = translation-fieldname ) = abap_true.
         CONTINUE.
       ENDIF.
 
@@ -278,14 +303,14 @@ CLASS lhc_translation IMPLEMENTATION.
     LOOP AT sources INTO DATA(source).
       " Empty target languages are reported by the caller (message 004); building
       " an empty key here is harmless because the reads below simply find nothing.
-      DATA(requested_language) = action_keys[ KEY id %tky = source-%tky ]-%param-TargetLanguage.
-      APPEND VALUE #( %key-FormName    = source-formname
-                      %key-FieldName   = source-fieldname
-                      %key-LanguageKey = requested_language
+      DATA(requested_language) = action_keys[ KEY id %tky = source-%tky ]-%param-targetlanguage.
+      APPEND VALUE #( %key-formname    = source-formname
+                      %key-fieldname   = source-fieldname
+                      %key-languagekey = requested_language
                       %is_draft        = if_abap_behv=>mk-off ) TO active_keys.
-      APPEND VALUE #( %key-FormName    = source-formname
-                      %key-FieldName   = source-fieldname
-                      %key-LanguageKey = requested_language
+      APPEND VALUE #( %key-formname    = source-formname
+                      %key-fieldname   = source-fieldname
+                      %key-languagekey = requested_language
                       %is_draft        = if_abap_behv=>mk-on  ) TO draft_keys.
     ENDLOOP.
 
@@ -301,6 +326,14 @@ CLASS lhc_translation IMPLEMENTATION.
          RESULT DATA(existing_draft).
 
     APPEND LINES OF existing_draft TO result.
+  ENDMETHOD.
+
+  METHOD build_copy_requests.
+    result = VALUE #( FOR source IN sources
+                      ( formname        = source-formname
+                        fieldname       = source-fieldname
+                        source_language = source-languagekey
+                        target_language = action_keys[ KEY id %tky = source-%tky ]-%param-targetlanguage ) ).
   ENDMETHOD.
 
   METHOD copytolanguage.
@@ -324,24 +357,36 @@ CLASS lhc_translation IMPLEMENTATION.
                                             action_keys = keys ).
 
     " Flatten the persisted targets into a plain key table; rows queued during
-    " this call are added to the same table so the in-batch collision case is
-    " handled by exactly the same rule.
-    DATA(occupied) = VALUE zcl_form_trans_rules=>translation_keys( FOR row IN existing
-                                                        ( formname    = row-formname
-                                                          fieldname   = row-fieldname
-                                                          languagekey = row-languagekey ) ).
+    " this call are added to the same table, so a collision that the ambiguity
+    " rule did not foresee is still caught here.
+    DATA(occupied) = VALUE zcl_form_trans_rules=>translation_keys(
+                         FOR row IN existing
+                         ( formname    = row-formname
+                           fieldname   = row-fieldname
+                           languagekey = row-languagekey ) ).
+
+    " The whole batch has to be known before the first row is processed: two
+    " selected rows of the same field, in different languages, can request the
+    " same target. Whichever the READ happened to return first would otherwise
+    " win silently, and the other would be rejected as a duplicate of a row that
+    " this very action had just created.
+    DATA(ambiguous) = zcl_form_trans_rules=>find_ambiguous_targets(
+                          build_copy_requests( sources     = translations
+                                               action_keys = keys ) ).
 
     DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
 
     LOOP AT translations INTO DATA(translation).
-      DATA(action_key)      = keys[ Key id %tky = translation-%tky ].
-      DATA(target_language) = action_key-%param-TargetLanguage.
+      DATA(action_key)      = keys[ KEY id %tky = translation-%tky ].
+      DATA(target_language) = action_key-%param-targetlanguage.
 
-      DATA(rejection) = zcl_form_trans_rules=>check_copy_request( source_language = translation-languagekey
-                                                       target_language = target_language
-                                                       formname        = translation-formname
-                                                       fieldname       = translation-fieldname
-                                                       occupied        = occupied ).
+      DATA(rejection) = zcl_form_trans_rules=>check_copy_request(
+                            source_language = translation-languagekey
+                            target_language = target_language
+                            formname        = translation-formname
+                            fieldname       = translation-fieldname
+                            ambiguous       = ambiguous
+                            occupied        = occupied ).
 
       IF rejection IS NOT INITIAL.
         APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
@@ -349,7 +394,8 @@ CLASS lhc_translation IMPLEMENTATION.
                         %msg = new_message( id       = zcl_form_trans_rules=>message_class
                                             number   = rejection
                                             severity = if_abap_behv_message=>severity-error
-                                            v1       = target_language ) )
+                                            v1       = language_code( target_language )
+                                            v2       = translation-fieldname ) )
                TO reported-translation.
         CONTINUE.
       ENDIF.
@@ -387,5 +433,17 @@ CLASS lhc_translation IMPLEMENTATION.
                                     ( LINES OF failed_create-translation ) ).
     reported-translation = VALUE #( BASE reported-translation
                                     ( LINES OF reported_create-translation ) ).
+  ENDMETHOD.
+
+  METHOD language_code.
+    TRY.
+        result = xco_cp=>language( CONV #( language ) )->get_name( ).
+      CATCH cx_static_check.
+        result = language.
+    ENDTRY.
+
+    IF result IS INITIAL.
+      result = language.
+    ENDIF.
   ENDMETHOD.
 ENDCLASS.

@@ -28,6 +28,9 @@ CLASS zcl_form_trans_rules DEFINITION
     CONSTANTS msg_text_truncated    TYPE symsgno VALUE '006'.
     "! Form and field names must be entered in upper case.
     CONSTANTS msg_key_not_upper     TYPE symsgno VALUE '007'.
+    "! Only one source row can be copied to language &amp;1 for field &amp;2.
+    "! Messages 008 and 009 are reserved for the authorization checks.
+    CONSTANTS msg_ambiguous_source  TYPE symsgno VALUE '010'.
 
     "! Upper bound of domain {@link DOMA:ZABAP_FORM_MAXLENGTH}. Its fixed values
     "! are only enforced on the UI, so the range has to be checked again here
@@ -50,6 +53,23 @@ CLASS zcl_form_trans_rules DEFINITION
     "! are harmless for the lookup.
     TYPES translation_keys TYPE SORTED TABLE OF translation_key
                            WITH NON-UNIQUE KEY formname fieldname languagekey.
+
+    TYPES:
+      "! One row that the user selected for copyToLanguage, together with the
+      "! language requested in the popup.
+      BEGIN OF copy_request,
+        "! Form key of the row being copied.
+        formname        TYPE zabap_form_trans_name,
+        "! Field key of the row being copied.
+        fieldname       TYPE zabap_form_trans_field,
+        "! Language the row currently carries.
+        source_language TYPE zabap_form_trans_langu,
+        "! Language requested in the popup.
+        target_language TYPE zabap_form_trans_langu,
+      END OF copy_request.
+
+    "! Every row of one copyToLanguage call, in the order they were read.
+    TYPES copy_requests TYPE STANDARD TABLE OF copy_request WITH EMPTY KEY.
 
     "! Checks MaxLength against the range of its domain.
     "! A value of 0 means <em>no length limit</em> and stays legal.
@@ -86,15 +106,34 @@ CLASS zcl_form_trans_rules DEFINITION
                 fieldname     TYPE zabap_form_trans_field
       RETURNING VALUE(result) TYPE abap_boolean.
 
+    "! Finds the target keys that more than one selected row wants to write.
+    "! Two rows of the same form and field, in different languages, can request
+    "! the same target language. There is no defensible way to pick a winner, so
+    "! the caller rejects every row of such a group instead of letting the row
+    "! that happens to be read first decide the stored text.
+    "! <br>
+    "! Requests that are rejected for a more precise reason - no target language
+    "! at all, or the source language itself - are left out, so that they never
+    "! turn an otherwise unambiguous field into a group.
+    "!
+    "! @parameter requests | One entry per row selected for copyToLanguage.
+    "! @parameter result   | Target keys claimed by more than one request, each
+    "!                       one listed exactly once.
+    CLASS-METHODS find_ambiguous_targets
+      IMPORTING requests      TYPE copy_requests
+      RETURNING VALUE(result) TYPE translation_keys.
+
     "! Decides whether one copy request is acceptable.
     "! The rejection reasons are evaluated in a fixed order: missing target
-    "! language, copy onto the source language itself, and finally a target key
-    "! that is already taken.
+    "! language, copy onto the source language itself, a target claimed by
+    "! several selected rows, and finally a target key that is already taken.
     "!
     "! @parameter source_language | Language of the row being copied.
     "! @parameter target_language | Language requested in the popup.
     "! @parameter formname        | Form key of the row being copied.
     "! @parameter fieldname       | Field key of the row being copied.
+    "! @parameter ambiguous       | Target keys claimed by more than one selected
+    "!                             row, as returned by find_ambiguous_targets.
     "! @parameter occupied        | Target keys that are already taken, both
     "!                             persisted and queued within the same batch.
     "! @parameter result          | Message number describing the rejection,
@@ -104,6 +143,7 @@ CLASS zcl_form_trans_rules DEFINITION
                 target_language TYPE zabap_form_trans_langu
                 formname        TYPE zabap_form_trans_name
                 fieldname       TYPE zabap_form_trans_field
+                ambiguous       TYPE translation_keys
                 occupied        TYPE translation_keys
       RETURNING VALUE(result)   TYPE symsgno.
 
@@ -126,6 +166,42 @@ CLASS zcl_form_trans_rules IMPLEMENTATION.
                       AND fieldname = to_upper( fieldname ) ).
   ENDMETHOD.
 
+  METHOD find_ambiguous_targets.
+    DATA seen TYPE translation_keys.
+
+    LOOP AT requests INTO DATA(request).
+
+      " Rejected elsewhere for a more precise reason: message 004 for a missing
+      " target language, message 005 for a copy onto the source language.
+      IF    request-target_language IS INITIAL
+         OR request-target_language  = request-source_language.
+        CONTINUE.
+      ENDIF.
+
+      DATA(target) = VALUE translation_key( formname    = request-formname
+                                            fieldname   = request-fieldname
+                                            languagekey = request-target_language ).
+
+      IF NOT line_exists( seen[ formname    = target-formname
+                                fieldname   = target-fieldname
+                                languagekey = target-languagekey ] ).
+        INSERT target INTO TABLE seen.
+        CONTINUE.
+      ENDIF.
+
+      " A further selected row competes for the very same target key. Report the
+      " key once, no matter how many rows compete for it.
+      IF line_exists( result[ formname    = target-formname
+                              fieldname   = target-fieldname
+                              languagekey = target-languagekey ] ).
+        CONTINUE.
+      ENDIF.
+
+      INSERT target INTO TABLE result.
+
+    ENDLOOP.
+  ENDMETHOD.
+
   METHOD check_copy_request.
     IF target_language IS INITIAL.
       result = msg_language_missing.
@@ -134,6 +210,17 @@ CLASS zcl_form_trans_rules IMPLEMENTATION.
 
     IF target_language = source_language.
       result = msg_same_language.
+      RETURN.
+    ENDIF.
+
+    " Evaluated before the occupied set on purpose. When two selected rows
+    " compete for one target key, whichever is processed first would otherwise
+    " create it, and the second would be rejected as a duplicate of a row that
+    " this very action had just produced - a misleading reason for the user.
+    IF line_exists( ambiguous[ formname    = formname
+                               fieldname   = fieldname
+                               languagekey = target_language ] ).
+      result = msg_ambiguous_source.
       RETURN.
     ENDIF.
 
@@ -146,4 +233,3 @@ CLASS zcl_form_trans_rules IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 ENDCLASS.
-

@@ -62,6 +62,12 @@
      <MSGNR>009</MSGNR>
      <TEXT>You are not authorized to change or delete form translations</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP_FORM_TRANS_MSG</ARBGB>
+     <MSGNR>010</MSGNR>
+     <TEXT>Only one source row can be copied to language &amp;1 for field &amp;2</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>
