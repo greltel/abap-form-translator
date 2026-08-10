@@ -39,6 +39,7 @@ The repository was created by [George Drakos](https://www.linkedin.com/in/george
 * **Performance:** Optimized with table buffering to ensure zero impact on print times.
 * **Unit Tested:** Includes built-in ABAP Unit tests.
 * **Fiori Elements App** built entirely with the ABAP RESTful Application Programming Model (RAP) for maintaining form translations
+* **Copy Language:** Duplicate an existing translation into another language straight from the list, without retyping it.
 
 ![2026-03-07 23-40-52](https://github.com/user-attachments/assets/becf5ae2-4df8-4431-baca-0b66c9ba50a2)
 
@@ -123,3 +124,17 @@ Maintain the texts through the RAP/Fiori app (`ZUI_FORM_TRANS_BIN`) in this tabl
 | `LANGU` | `ZABAP_FORM_TRANS_LANGU` (LANG) | ✔ | Language of the text. |
 | `DESCR` | `ZABAP_FORM_TRANS_DESCR` (CHAR 50) | | Translated text. |
 | `LENGTH` | `ZABAP_FORM_TRANS_MAXLEN` (INT2, domain range 0–9999) | | Max length; text longer than this is truncated at print time. `0` means no length limit. |
+
+### Copying a translation into another language
+
+Select one or more rows in the list, press **Copy Language** and pick the target
+language. Each selected row is duplicated into that language as a draft, keeping
+its description and max length.
+
+Rejected with a message:
+
+* the target language is empty, or is the language of the row itself
+* a translation already exists under the target key, active or draft
+* two selected rows of the same form and field aim at the same target language —
+  there is no way to tell which text should win, so the whole selection is
+  rejected rather than letting the first row silently decide
