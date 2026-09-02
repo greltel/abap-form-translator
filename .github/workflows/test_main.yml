@@ -1,22 +1,39 @@
-name: test_translator
+name: test
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: 'npm'
-      - run: npm ci
-      - run: npm run lint
-      - run: npm test
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (abaplint)
+        run: npm run lint
+
+      - name: Transpile & run unit tests
+        run: npm test
