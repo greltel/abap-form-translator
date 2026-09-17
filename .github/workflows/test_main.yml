@@ -42,4 +42,5 @@ jobs:
       # report button groups them into one change set. Unit tests cannot see
       # the metadata extension, so the annotation is guarded here.
       - name: Guard copyToLanguage change-set grouping
-        run: grep -q 'invocationGrouping: #CHANGE_SET' src/zc_form_trans_mde.ddlx.asddlxs
+        run: |
+          grep -q 'invocationGrouping: #CHANGE_SET' src/zc_form_trans_mde.ddlx.asddlxs
