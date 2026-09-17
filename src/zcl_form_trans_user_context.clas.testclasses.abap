@@ -1,9 +1,11 @@
 *"* use this source file for your ABAP unit test classes
-
 "! <p class="shorttext" lang="EN">Tests for the platform user context</p>
 "! The adapter only forwards to the platform, so the single test pins the
 "! forwarding down: the language it returns is the one of the session that
 "! runs the test.
+"! <br>
+"! Skipped in the off-stack run (see the skip list in abap_transpile.json):
+"! open-abap-xco declares the XCO language API but does not populate its value.
 CLASS ltc_user_context DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
