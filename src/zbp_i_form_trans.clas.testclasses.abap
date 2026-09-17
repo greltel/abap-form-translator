@@ -92,11 +92,11 @@ CLASS lth_translation_doubles IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 
-
 "! <p class="shorttext" lang="EN">Save sequence smoke test</p>
-"! Proves that the validations are wired into the save sequence and that their
-"! messages reach the caller. The rules themselves are covered by
-"! {@link zcl_form_trans_rules} unit tests, without any RAP or test double involvement.
+"! Two EML driven tests that prove the wiring: a valid row passes the whole
+"! save sequence, and a rejection raised by a validation reaches the caller
+"! of COMMIT ENTITIES. Every rule and every handler method is covered by the
+"! direct tests below; nothing else is repeated here.
 CLASS ltc_form_trans DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
@@ -121,7 +121,6 @@ CLASS ltc_form_trans DEFINITION FINAL
     "! @parameter fieldname   | Field key, defaults to a valid upper case name.
     "! @parameter languagekey | Language of the text, defaults to English.
     "! @parameter description | Text to store, defaults to a non-empty value.
-    "! @parameter maxlength   | Length limit, defaults to 0 for no limit.
     "! @parameter failed      | Instances rejected by the save sequence.
     "! @parameter reported    | Messages raised by the save sequence.
     METHODS create_and_save
@@ -129,7 +128,6 @@ CLASS ltc_form_trans DEFINITION FINAL
                 fieldname    TYPE zabap_form_trans_field  DEFAULT 'TITLE'
                 languagekey  TYPE zabap_form_trans_langu  DEFAULT 'E'
                 !description TYPE zabap_form_trans_descr  DEFAULT 'Invoice'
-                maxlength    TYPE zabap_form_trans_maxlen DEFAULT 0
       EXPORTING !failed      TYPE failed_late
                 !reported    TYPE reported_late.
 
@@ -143,12 +141,8 @@ CLASS ltc_form_trans DEFINITION FINAL
       IMPORTING !reported TYPE reported_late
                 expected  TYPE symsgno.
 
-    METHODS given_valid_row_then_saved     FOR TESTING.
-    METHODS given_no_text_then_rejected    FOR TESTING.
-    METHODS given_len_20000_then_rejected  FOR TESTING.
-    METHODS given_len_neg_then_rejected    FOR TESTING.
-    METHODS given_long_text_then_saved     FOR TESTING.
-    METHODS given_lower_form_then_rejected FOR TESTING.
+    METHODS given_valid_row_then_saved  FOR TESTING.
+    METHODS given_no_text_then_rejected FOR TESTING.
 
 ENDCLASS.
 
@@ -184,13 +178,12 @@ CLASS ltc_form_trans IMPLEMENTATION.
   METHOD create_and_save.
     MODIFY ENTITIES OF zi_form_trans
            ENTITY translation
-           CREATE FIELDS ( formname fieldname languagekey description maxlength )
+           CREATE FIELDS ( formname fieldname languagekey description )
            WITH VALUE #( ( %cid        = 'CID1'
                            formname    = formname
                            fieldname   = fieldname
                            languagekey = languagekey
-                           description = description
-                           maxlength   = maxlength ) ).
+                           description = description ) ).
 
     COMMIT ENTITIES RESPONSE OF zi_form_trans
            FAILED   DATA(commit_failed)
@@ -239,72 +232,6 @@ CLASS ltc_form_trans IMPLEMENTATION.
 
     assert_save_message( reported = reported
                          expected = zcl_form_trans_rules=>msg_description_empty ).
-  ENDMETHOD.
-
-  METHOD given_len_20000_then_rejected.
-    " --- ACT
-    create_and_save( EXPORTING maxlength = 20000
-                     IMPORTING failed    = DATA(failed)
-                               reported  = DATA(reported) ).
-
-    " --- ASSERT
-    cl_abap_unit_assert=>assert_not_initial(
-        act = failed-translation
-        msg = `MaxLength above the domain range must be rejected on the server side` ).
-
-    assert_save_message( reported = reported
-                         expected = zcl_form_trans_rules=>msg_maxlength_invalid ).
-  ENDMETHOD.
-
-  METHOD given_len_neg_then_rejected.
-    " --- ACT
-    create_and_save( EXPORTING maxlength = -1
-                     IMPORTING failed    = DATA(failed)
-                               reported  = DATA(reported) ).
-
-    " --- ASSERT
-    cl_abap_unit_assert=>assert_not_initial(
-        act = failed-translation
-        msg = `A negative MaxLength must be rejected` ).
-
-    assert_save_message( reported = reported
-                         expected = zcl_form_trans_rules=>msg_maxlength_invalid ).
-  ENDMETHOD.
-
-  METHOD given_long_text_then_saved.
-    " A description longer than MaxLength is legal - it is only truncated at
-    " print time - so the row must still be saved.
-    "
-    " The warning itself is deliberately not asserted here: the save sequence
-    " only propagates messages for instances it rejects, so a non-blocking
-    " warning never reaches the caller on this path. In the app the warning is
-    " raised by the Prepare determination, which is where the user sees it.
-    " Detection of the truncation is covered by LTC_RULES.
-
-    " --- ACT
-    create_and_save( EXPORTING description = 'A description that is clearly too long'
-                               maxlength   = 5
-                     IMPORTING failed      = DATA(failed) ).
-
-    " --- ASSERT
-    cl_abap_unit_assert=>assert_initial(
-        act = failed-translation
-        msg = `Truncation is a warning only and must not block the save` ).
-  ENDMETHOD.
-
-  METHOD given_lower_form_then_rejected.
-    " --- ACT
-    create_and_save( EXPORTING formname = 'ztest'
-                     IMPORTING failed   = DATA(failed)
-                               reported = DATA(reported) ).
-
-    " --- ASSERT
-    cl_abap_unit_assert=>assert_not_initial(
-        act = failed-translation
-        msg = `A lower case form name must be rejected, it could never be found at print time` ).
-
-    assert_save_message( reported = reported
-                         expected = zcl_form_trans_rules=>msg_key_not_upper ).
   ENDMETHOD.
 
 ENDCLASS.

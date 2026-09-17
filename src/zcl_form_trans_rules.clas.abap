@@ -131,24 +131,18 @@ CLASS zcl_form_trans_rules DEFINITION
     "! language, copy onto the source language itself, a target claimed by
     "! several selected rows, and finally a target key that is already taken.
     "!
-    "! @parameter source_language | Language of the row being copied.
-    "! @parameter target_language | Language requested in the popup.
-    "! @parameter formname        | Form key of the row being copied.
-    "! @parameter fieldname       | Field key of the row being copied.
-    "! @parameter ambiguous       | Target keys claimed by more than one selected
-    "!                             row, as returned by find_ambiguous_targets.
-    "! @parameter occupied        | Target keys that are already taken, both
-    "!                             persisted and queued within the same batch.
-    "! @parameter result          | Message number describing the rejection,
-    "!                             initial when the request is acceptable.
+    "! @parameter request   | The row being copied and the language requested for it.
+    "! @parameter ambiguous | Target keys claimed by more than one selected row,
+    "!                       as returned by find_ambiguous_targets.
+    "! @parameter occupied  | Target keys that are already taken, both persisted
+    "!                       and queued within the same batch.
+    "! @parameter result    | Message number describing the rejection, initial
+    "!                       when the request is acceptable.
     CLASS-METHODS check_copy_request
-      IMPORTING source_language TYPE zabap_form_trans_langu
-                target_language TYPE zabap_form_trans_langu
-                formname        TYPE zabap_form_trans_name
-                fieldname       TYPE zabap_form_trans_field
-                ambiguous       TYPE translation_keys
-                occupied        TYPE translation_keys
-      RETURNING VALUE(result)   TYPE symsgno.
+      IMPORTING !request      TYPE copy_request
+                ambiguous     TYPE translation_keys
+                occupied      TYPE translation_keys
+      RETURNING VALUE(result) TYPE symsgno.
 
 ENDCLASS.
 
@@ -206,12 +200,12 @@ CLASS zcl_form_trans_rules IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD check_copy_request.
-    IF target_language IS INITIAL.
+    IF request-target_language IS INITIAL.
       result = msg_language_missing.
       RETURN.
     ENDIF.
 
-    IF target_language = source_language.
+    IF request-target_language = request-source_language.
       result = msg_same_language.
       RETURN.
     ENDIF.
@@ -220,18 +214,18 @@ CLASS zcl_form_trans_rules IMPLEMENTATION.
     " compete for one target key, whichever is processed first would otherwise
     " create it, and the second would be rejected as a duplicate of a row that
     " this very action had just produced - a misleading reason for the user.
-    IF line_exists( ambiguous[ formname    = formname
-                               fieldname   = fieldname
-                               languagekey = target_language ] ).
+    IF line_exists( ambiguous[ formname    = request-formname
+                               fieldname   = request-fieldname
+                               languagekey = request-target_language ] ).
       result = msg_ambiguous_source.
       RETURN.
     ENDIF.
 
     " Covers rows that are already persisted (active or draft) as well as rows
     " queued earlier in the same batch - both end up in "occupied".
-    IF line_exists( occupied[ formname    = formname
-                              fieldname   = fieldname
-                              languagekey = target_language ] ).
+    IF line_exists( occupied[ formname    = request-formname
+                              fieldname   = request-fieldname
+                              languagekey = request-target_language ] ).
       result = msg_duplicate_key.
     ENDIF.
   ENDMETHOD.

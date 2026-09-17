@@ -31,7 +31,8 @@ CLASS lcl_form_trans_factory IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 
-" Forward declaration so the handler can name its test class as friend.
+
+" Forward declarations so the handler can name its test classes as friends.
 CLASS ltc_authorizations DEFINITION DEFERRED FOR TESTING.
 CLASS ltc_validations DEFINITION DEFERRED FOR TESTING.
 CLASS ltc_features DEFINITION DEFERRED FOR TESTING.
@@ -58,9 +59,14 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler
     "! State area of validateKeyCase.
     CONSTANTS area_key_case    TYPE string VALUE 'KEY_CASE'.
 
-    "! Reported response of the interaction phase, as filled by the
-    "! authorization handler.
+    "! Failed response of the interaction phase.
+    TYPES failed_early   TYPE RESPONSE FOR FAILED EARLY zi_form_trans.
+    "! Reported response of the interaction phase.
     TYPES reported_early TYPE RESPONSE FOR REPORTED EARLY zi_form_trans.
+    "! Mapped response of the interaction phase.
+    TYPES mapped_early   TYPE RESPONSE FOR MAPPED EARLY zi_form_trans.
+    "! Draft rows handed to the managed CREATE.
+    TYPES new_entries    TYPE TABLE FOR CREATE zi_form_trans.
 
     "! Grants or denies the operations the framework asks about, based on
     "! authorization object ZFORMTRA. copyToLanguage creates rows and follows
@@ -156,6 +162,16 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler
       IMPORTING sources       TYPE translation_result
       RETURNING VALUE(result) TYPE zcl_form_trans_rules=>translation_keys.
 
+    "! Pairs one selected row with the target language requested for it.
+    "!
+    "! @parameter source      | Row that is about to be copied.
+    "! @parameter action_keys | Action keys carrying the target language.
+    "! @parameter result      | The copy request for that row.
+    METHODS copy_request_of
+      IMPORTING source        TYPE LINE OF translation_result
+                action_keys   TYPE copy_action_keys
+      RETURNING VALUE(result) TYPE zcl_form_trans_rules=>copy_request.
+
     "! Pairs every selected row with the target language requested for it, so
     "! that the ambiguity rule can look at the whole batch before the first row
     "! is processed.
@@ -167,6 +183,49 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler
       IMPORTING sources       TYPE translation_result
                 action_keys   TYPE copy_action_keys
       RETURNING VALUE(result) TYPE zcl_form_trans_rules=>copy_requests.
+
+    "! Runs every selected row through the copy rules: acceptable rows are
+    "! queued as new draft entries, the others are reported with their reason.
+    "!
+    "! @parameter sources     | Rows that are about to be copied.
+    "! @parameter action_keys | Action keys carrying the target language.
+    "! @parameter entries     | Draft rows accepted so far.
+    "! @parameter failed      | Rejected keys.
+    "! @parameter reported    | Rejection messages.
+    METHODS queue_copies
+      IMPORTING sources     TYPE translation_result
+                action_keys TYPE copy_action_keys
+      CHANGING  entries     TYPE new_entries
+                !failed     TYPE failed_early
+                !reported   TYPE reported_early.
+
+    "! Marks one request as failed and reports why, naming the target
+    "! language and the field in the message.
+    "!
+    "! @parameter translation | Row whose copy was rejected.
+    "! @parameter request     | The rejected copy request.
+    "! @parameter rejection   | Message number returned by the rules.
+    "! @parameter failed      | Rejected keys.
+    "! @parameter reported    | Rejection messages.
+    METHODS report_rejection
+      IMPORTING translation TYPE LINE OF translation_result
+                !request    TYPE zcl_form_trans_rules=>copy_request
+                rejection   TYPE symsgno
+      CHANGING  !failed     TYPE failed_early
+                !reported   TYPE reported_early.
+
+    "! Creates the queued rows as drafts and merges the responses of the
+    "! managed CREATE into the responses of the action.
+    "!
+    "! @parameter entries  | Draft rows to create.
+    "! @parameter mapped   | Content ids mapped to the created drafts.
+    "! @parameter failed   | Rows the managed CREATE rejected.
+    "! @parameter reported | Messages of the managed CREATE.
+    METHODS create_drafts
+      IMPORTING entries   TYPE new_entries
+      CHANGING  !mapped   TYPE mapped_early
+                !failed   TYPE failed_early
+                !reported TYPE reported_early.
 
     "! Formats a language key the way the rest of the app shows it.
     "! ZABAP_FORM_TRANS_LANGU carries the ISOLA conversion exit, which the T100
@@ -447,12 +506,17 @@ CLASS lhc_translation IMPLEMENTATION.
     INSERT LINES OF existing_draft INTO TABLE result.
   ENDMETHOD.
 
+  METHOD copy_request_of.
+    result = VALUE #( formname        = source-formname
+                      fieldname       = source-fieldname
+                      source_language = source-languagekey
+                      target_language = action_keys[ KEY id %tky = source-%tky ]-%param-targetlanguage ).
+  ENDMETHOD.
+
   METHOD build_copy_requests.
     result = VALUE #( FOR source IN sources
-                      ( formname        = source-formname
-                        fieldname       = source-fieldname
-                        source_language = source-languagekey
-                        target_language = action_keys[ KEY id %tky = source-%tky ]-%param-targetlanguage ) ).
+                      ( copy_request_of( source      = source
+                                         action_keys = action_keys ) ) ).
   ENDMETHOD.
 
   METHOD copytolanguage.
@@ -471,75 +535,95 @@ CLASS lhc_translation IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA(existing) = read_existing_targets( sources     = translations
-                                            action_keys = keys ).
+    DATA entries TYPE new_entries.
 
-    " Flatten the persisted targets into a plain key table; rows queued during
-    " this call are added to the same table, so a collision that the ambiguity
-    " rule did not foresee is still caught here.
-    DATA(occupied) = VALUE zcl_form_trans_rules=>translation_keys(
-                         FOR row IN existing
-                         ( formname    = row-formname
-                           fieldname   = row-fieldname
-                           languagekey = row-languagekey ) ).
+    queue_copies( EXPORTING sources     = translations
+                            action_keys = keys
+                  CHANGING  entries     = entries
+                            failed      = failed
+                            reported    = reported ).
 
+    IF entries IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    create_drafts( EXPORTING entries  = entries
+                   CHANGING  mapped   = mapped
+                             failed   = failed
+                             reported = reported ).
+  ENDMETHOD.
+
+  METHOD queue_copies.
     " The whole batch has to be known before the first row is processed: two
     " selected rows of the same field, in different languages, can request the
     " same target. Whichever the READ happened to return first would otherwise
     " win silently, and the other would be rejected as a duplicate of a row that
     " this very action had just created.
     DATA(ambiguous) = zcl_form_trans_rules=>find_ambiguous_targets(
-                          build_copy_requests( sources     = translations
-                                               action_keys = keys ) ).
+                          build_copy_requests( sources     = sources
+                                               action_keys = action_keys ) ).
 
-    DATA new_entries TYPE TABLE FOR CREATE zi_form_trans.
+    " Persisted targets, active and draft, as a plain key set. Rows queued
+    " during this call are added to the same set, so a collision the ambiguity
+    " rule did not foresee is still caught.
+    DATA(occupied) = VALUE zcl_form_trans_rules=>translation_keys(
+                         FOR row IN read_existing_targets( sources     = sources
+                                                           action_keys = action_keys )
+                         ( formname    = row-formname
+                           fieldname   = row-fieldname
+                           languagekey = row-languagekey ) ).
 
-    LOOP AT translations INTO DATA(translation).
-      DATA(action_key)      = keys[ KEY id %tky = translation-%tky ].
-      DATA(target_language) = action_key-%param-targetlanguage.
+    LOOP AT sources INTO DATA(translation).
+      DATA(request) = copy_request_of( source      = translation
+                                       action_keys = action_keys ).
 
-      DATA(rejection) = zcl_form_trans_rules=>check_copy_request(
-                            source_language = translation-languagekey
-                            target_language = target_language
-                            formname        = translation-formname
-                            fieldname       = translation-fieldname
-                            ambiguous       = ambiguous
-                            occupied        = occupied ).
-
+      DATA(rejection) = zcl_form_trans_rules=>check_copy_request( request   = request
+                                                                  ambiguous = ambiguous
+                                                                  occupied  = occupied ).
       IF rejection IS NOT INITIAL.
-        INSERT VALUE #( %tky = translation-%tky ) INTO TABLE failed-translation.
-        INSERT VALUE #( %tky = translation-%tky
-                        %msg = new_message( id       = zcl_form_trans_rules=>message_class
-                                            number   = rejection
-                                            severity = if_abap_behv_message=>severity-error
-                                            v1       = language_code( target_language )
-                                            v2       = translation-fieldname ) )
-              INTO TABLE reported-translation.
+        report_rejection( EXPORTING translation = translation
+                                    request     = request
+                                    rejection   = rejection
+                          CHANGING  failed      = failed
+                                    reported    = reported ).
         CONTINUE.
       ENDIF.
 
-      INSERT VALUE #( formname    = translation-formname
-                      fieldname   = translation-fieldname
-                      languagekey = target_language ) INTO TABLE occupied.
+      INSERT VALUE #( formname    = request-formname
+                      fieldname   = request-fieldname
+                      languagekey = request-target_language ) INTO TABLE occupied.
 
-      INSERT VALUE #( %cid        = action_key-%cid
-                      formname    = translation-formname
-                      fieldname   = translation-fieldname
-                      languagekey = target_language
+      INSERT VALUE #( %cid        = action_keys[ KEY id %tky = translation-%tky ]-%cid
+                      formname    = request-formname
+                      fieldname   = request-fieldname
+                      languagekey = request-target_language
                       description = translation-description
                       maxlength   = translation-maxlength
-                      %is_draft   = if_abap_behv=>mk-on ) INTO TABLE new_entries.
-
+                      %is_draft   = if_abap_behv=>mk-on ) INTO TABLE entries.
     ENDLOOP.
+  ENDMETHOD.
 
-    IF new_entries IS INITIAL.
-      RETURN.
-    ENDIF.
+  METHOD report_rejection.
+    INSERT VALUE #( %tky = translation-%tky ) INTO TABLE failed-translation.
+
+    INSERT VALUE #( %tky = translation-%tky
+                    %msg = new_message( id       = zcl_form_trans_rules=>message_class
+                                        number   = rejection
+                                        severity = if_abap_behv_message=>severity-error
+                                        v1       = language_code( request-target_language )
+                                        v2       = request-fieldname ) )
+           INTO TABLE reported-translation.
+  ENDMETHOD.
+
+  METHOD create_drafts.
+    " MODIFY ENTITIES needs a modifiable operand behind WITH; an importing
+    " parameter is read-only, so the rows are handed over through a local copy.
+    DATA(rows) = entries.
 
     MODIFY ENTITIES OF zi_form_trans IN LOCAL MODE
            ENTITY translation
            CREATE FIELDS ( formname fieldname languagekey description maxlength )
-           WITH new_entries
+           WITH rows
            MAPPED DATA(mapped_create)
            FAILED DATA(failed_create)
            REPORTED DATA(reported_create).

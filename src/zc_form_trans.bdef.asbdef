@@ -16,6 +16,8 @@ define behavior for ZC_FORM_TRANS alias Translation
   use action Prepare;
   use action copyToLanguage;
 
+  // A copy lands as a new draft row next to the source; the list has to
+  // refresh so the user sees it without reloading.
   side effects
   {
     action copyToLanguage affects $self;
