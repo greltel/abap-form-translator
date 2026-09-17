@@ -31,9 +31,11 @@ CLASS lcl_form_trans_factory IMPLEMENTATION.
   ENDMETHOD.
 ENDCLASS.
 
-
 " Forward declaration so the handler can name its test class as friend.
 CLASS ltc_authorizations DEFINITION DEFERRED FOR TESTING.
+CLASS ltc_validations DEFINITION DEFERRED FOR TESTING.
+CLASS ltc_features DEFINITION DEFERRED FOR TESTING.
+CLASS ltc_copy_action DEFINITION DEFERRED FOR TESTING.
 
 "! <p class="shorttext" lang="EN">Behavior implementation for ZI_FORM_TRANS</p>
 "! Handles the global authorization, the ON SAVE validations, the instance
@@ -44,7 +46,7 @@ CLASS ltc_authorizations DEFINITION DEFERRED FOR TESTING.
 "! popover on every Prepare. The rules themselves live in {@link zcl_form_trans_rules}
 "! and carry no RAP dependency.
 CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler
-  FRIENDS ltc_authorizations.
+  FRIENDS ltc_authorizations ltc_validations ltc_features ltc_copy_action.
   PRIVATE SECTION.
 
     "! State area of validateMaxLength.
