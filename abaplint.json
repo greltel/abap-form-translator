@@ -4,7 +4,7 @@
   },
   "dependencies": [
     {
-      "url": "https://github.com/abapedia/steampunk-2302-api",
+      "url": "https://github.com/abapedia/steampunk-2305-api",
       "folder": "/deps",
       "files": "/src/**/*.*"
     }
@@ -107,7 +107,9 @@
     "unused_variables": true,
     "indentation": true,
     "keyword_case": {
-      "exclude": ["zbp_i_form_trans"],
+      "exclude": [
+        "zbp_i_form_trans"
+      ],
       "style": "upper"
     },
     "line_length": {
@@ -128,6 +130,43 @@
       "statics": true,
       "defaultKey": true,
       "break": true
+    },
+    "check_syntax": {
+      "exclude": [
+        "zbp_i_form_trans.clas.testclasses.abap"
+      ]
+    },
+    "unknown_types": {
+      "exclude": [
+        "zbp_i_form_trans.clas.testclasses.abap"
+      ]
+    },
+    "cds_legacy_view": true,
+    "sy_read_restriction": true,
+    "sy_modification": true,
+    "db_operation_in_loop": true,
+    "select_add_order_by": true,
+    "select_performance": true,
+    "use_line_exists": true,
+    "prefer_corresponding": true,
+    "use_class_based_exceptions": true,
+    "uncaught_exception": true,
+    "constructor_visibility_public": true,
+    "prefix_is_current_class": true,
+    "omit_parameter_name": true,
+    "no_public_attributes": {
+      "exclude": [
+        "testclasses"
+      ],
+      "allowReadOnly": true
+    },
+    "commented_code": true,
+    "unused_types": true,
+    "unused_methods": true,
+    "abapdoc": {
+      "checkLocal": false,
+      "classDefinition": true,
+      "interfaceDefinition": true
     }
   }
 }
