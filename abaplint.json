@@ -11,7 +11,7 @@
   ],
   "syntax": {
     "version": "Cloud",
-    "errorNamespace": "."
+    "errorNamespace": "^(?!LT[CDH]_)."
   },
   "rules": {
     "object_naming": {
@@ -167,6 +167,12 @@
       "checkLocal": false,
       "classDefinition": true,
       "interfaceDefinition": true
+    },
+    "parser_error": {
+      "exclude": [
+        "zbp_i_form_trans.clas.locals_imp.abap",
+        "zbp_i_form_trans.clas.testclasses.abap"
+      ]
     }
   }
 }
