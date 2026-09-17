@@ -1,4 +1,3 @@
-// ZI_FORM_TRANS (BDEF)
 managed implementation in class zbp_i_form_trans unique;
 strict ( 2 );
 with draft;
@@ -42,13 +41,6 @@ etag master LocalLastChangedAt
   validation validateUniqueKey on save { field FormName, FieldName, LanguageKey; create; }
 
   validation validateKeyCase on save { field FormName, FieldName; create; }
-
-  // A copy lands as a new draft row next to the source; the list has to
-  // refresh so the user sees it without reloading.
-  side effects
-  {
-    action copyToLanguage affects $self;
-  }
 
   mapping for zabap_form_trans
     {
