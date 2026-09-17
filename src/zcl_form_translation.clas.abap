@@ -19,7 +19,7 @@ CLASS zcl_form_translation DEFINITION
 
     ALIASES translate_form FOR zif_form_translation~translate_form.
 
-    CONSTANTS version TYPE string VALUE '1.3.0' ##NEEDED.
+    CONSTANTS version TYPE string VALUE '2.0.0' ##NEEDED.
 
     "! <p class="shorttext synchronized">Wires the platform dependencies</p>
     "! Production callers use the parameterless form and get the real platform
