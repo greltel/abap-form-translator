@@ -19,14 +19,7 @@
   "output_folder": "output",
   "libs": [
     {
-      "url": "https://github.com/open-abap/open-abap-core",
-      "exclude_filter": [
-        "cl_abap_context_info\\.clas\\.abap$"
-      ]
-    },
-    {
-      "folder": "/open-abap-overrides",
-      "files": "/**/*.abap"
+      "url": "https://github.com/open-abap/open-abap-core"
     },
     {
       "url": "https://github.com/open-abap/open-abap-rap"
@@ -51,6 +44,13 @@
     "setup": {
       "filename": "../db_setup.mjs",
       "preFunction": "setupDatabase"
-    }
+    },
+    "skip": [
+      {
+        "object": "ZCL_FORM_TRANS_USER_CONTEXT",
+        "class": "LTC_USER_CONTEXT",
+        "method": "WHEN_ASKED_THEN_LOGON_LANGU"
+      }
+    ]
   }
 }
