@@ -75,7 +75,7 @@ CLASS ltc_form_trans IMPLEMENTATION.
 
     " The draft table is declared in the BDEF, not in the CDS entity, so it is
     " not covered by the base dependencies above.
-    draft_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZABAP_FORM_DRFT' ) ) ).
+    draft_environment = cl_osql_test_environment=>create( VALUE #( ( 'ZABAP_FORM_DRFT' ) ) ).
   ENDMETHOD.
 
   METHOD class_teardown.

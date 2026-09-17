@@ -3,15 +3,13 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>ZBP_I_FORM_TRANS</CLSNAME>
+    <CLSNAME>ZCL_FORM_TRANS_USER_CONTEXT</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Behavior pool for ZI_FORM_TRANS</DESCRIPT>
-    <CATEGORY>06</CATEGORY>
+    <DESCRIPT>Logon language from the platform context</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>
-    <UNICODE>X</UNICODE>
-    <CLSDEFINT>ZI_FORM_TRANS</CLSDEFINT>
+    <UNICODE>5</UNICODE>
     <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
    </VSEOCLASS>
   </asx:values>

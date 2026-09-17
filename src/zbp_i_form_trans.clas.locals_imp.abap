@@ -88,6 +88,15 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
                 action_keys   TYPE copy_action_keys
       RETURNING VALUE(result) TYPE translation_result.
 
+    "! Reads which of the given keys already exist in the persisted table - the
+    "! duplicate check of validateUniqueKey must not see the transactional buffer.
+    "!
+    "! @parameter sources | Instances about to be created.
+    "! @parameter result  | Keys among them that are already persisted.
+    METHODS read_persisted_keys
+      IMPORTING sources       TYPE translation_result
+      RETURNING VALUE(result) TYPE zcl_form_trans_rules=>translation_keys.
+
     "! Pairs every selected row with the target language requested for it, so
     "! that the ambiguity rule can look at the whole batch before the first row
     "! is processed.
@@ -106,8 +115,8 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
     "! list and popup of the app reads "EL".
     "!
     "! @parameter language | Internal SAP language key.
-    "! @parameter result   | ISO code, falling back to the internal key when it
-    "!                       cannot be resolved - a readable message matters
+    "! @parameter result   | ISO 639 code, falling back to the internal key when
+    "!                       it cannot be resolved - a readable message matters
     "!                       less than a message that appears at all.
     METHODS language_code
       IMPORTING language      TYPE zabap_form_trans_langu
@@ -160,22 +169,22 @@ CLASS lhc_translation IMPLEMENTATION.
     LOOP AT translations INTO DATA(translation).
 
       " Drop the messages of the previous run for this instance.
-      APPEND VALUE #( %tky        = translation-%tky
-                      %state_area = area_maxlength ) TO reported-translation.
+      INSERT VALUE #( %tky        = translation-%tky
+                      %state_area = area_maxlength ) INTO TABLE reported-translation.
 
       " MaxLength = 0 is a valid value and means "no length limit"
       " (see ZCL_FORM_TRANSLATION, which only truncates when length > 0).
       IF zcl_form_trans_rules=>is_maxlength_valid( translation-maxlength ) = abap_false.
 
-        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+        INSERT VALUE #( %tky = translation-%tky ) INTO TABLE failed-translation.
 
-        APPEND VALUE #( %tky               = translation-%tky
+        INSERT VALUE #( %tky               = translation-%tky
                         %state_area        = area_maxlength
                         %element-maxlength = if_abap_behv=>mk-on
                         %msg               = new_message( id       = zcl_form_trans_rules=>message_class
                                                           number   = zcl_form_trans_rules=>msg_maxlength_invalid
                                                           severity = if_abap_behv_message=>severity-error ) )
-               TO reported-translation.
+              INTO TABLE reported-translation.
 
         CONTINUE.
       ENDIF.
@@ -185,7 +194,7 @@ CLASS lhc_translation IMPLEMENTATION.
       IF zcl_form_trans_rules=>is_text_truncated( description = translation-description
                                                   maxlength   = translation-maxlength ) = abap_true.
 
-        APPEND VALUE #( %tky                 = translation-%tky
+        INSERT VALUE #( %tky                 = translation-%tky
                         %state_area          = area_maxlength
                         %element-description = if_abap_behv=>mk-on
                         %element-maxlength   = if_abap_behv=>mk-on
@@ -193,7 +202,7 @@ CLASS lhc_translation IMPLEMENTATION.
                                                             number   = zcl_form_trans_rules=>msg_text_truncated
                                                             severity = if_abap_behv_message=>severity-warning
                                                             v1       = |{ translation-maxlength }| ) )
-               TO reported-translation.
+              INTO TABLE reported-translation.
       ENDIF.
 
     ENDLOOP.
@@ -207,19 +216,19 @@ CLASS lhc_translation IMPLEMENTATION.
 
     LOOP AT translations INTO DATA(translation).
 
-      APPEND VALUE #( %tky        = translation-%tky
-                      %state_area = area_description ) TO reported-translation.
+      INSERT VALUE #( %tky        = translation-%tky
+                      %state_area = area_description ) INTO TABLE reported-translation.
 
       IF translation-description IS INITIAL.
-        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+        INSERT VALUE #( %tky = translation-%tky ) INTO TABLE failed-translation.
 
-        APPEND VALUE #( %tky                 = translation-%tky
+        INSERT VALUE #( %tky                 = translation-%tky
                         %state_area          = area_description
                         %element-description = if_abap_behv=>mk-on
                         %msg                 = new_message( id       = zcl_form_trans_rules=>message_class
                                                             number   = zcl_form_trans_rules=>msg_description_empty
                                                             severity = if_abap_behv_message=>severity-error ) )
-               TO reported-translation.
+              INTO TABLE reported-translation.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -230,36 +239,50 @@ CLASS lhc_translation IMPLEMENTATION.
          FIELDS ( formname fieldname languagekey ) WITH CORRESPONDING #( keys )
          RESULT DATA(translations).
 
+    DATA(persisted) = read_persisted_keys( translations ).
+
     LOOP AT translations INTO DATA(translation).
 
-      APPEND VALUE #( %tky        = translation-%tky
-                      %state_area = area_unique_key ) TO reported-translation.
+      INSERT VALUE #( %tky        = translation-%tky
+                      %state_area = area_unique_key ) INTO TABLE reported-translation.
 
-      " Deliberate exception to the "no SELECT in a handler" rule: READ ENTITIES
-      " IN LOCAL MODE reads the transactional buffer, which during save already
-      " contains the very instance being created - it would always report itself
-      " as a duplicate. This check must see the persisted state only.
       " Only reached for the create trigger, so a hit is always a real duplicate
       " and never the instance being edited.
-      SELECT SINGLE @abap_true FROM zabap_form_trans
-        WHERE form      = @translation-formname
-          AND fieldname = @translation-fieldname
-          AND langu     = @translation-languagekey
-        INTO @DATA(exists).
-
-      IF exists = abap_true.
-        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
-
-        APPEND VALUE #( %tky        = translation-%tky
-                        %state_area = area_unique_key
-                        %msg        = new_message( id       = zcl_form_trans_rules=>message_class
-                                                   number   = zcl_form_trans_rules=>msg_duplicate_key
-                                                   severity = if_abap_behv_message=>severity-error
-                                                   v1       = language_code( translation-languagekey ) ) )
-               TO reported-translation.
+      IF NOT line_exists( persisted[ formname    = translation-formname
+                                     fieldname   = translation-fieldname
+                                     languagekey = translation-languagekey ] ).
+        CONTINUE.
       ENDIF.
 
+      INSERT VALUE #( %tky = translation-%tky ) INTO TABLE failed-translation.
+
+      INSERT VALUE #( %tky        = translation-%tky
+                      %state_area = area_unique_key
+                      %msg        = new_message( id       = zcl_form_trans_rules=>message_class
+                                                 number   = zcl_form_trans_rules=>msg_duplicate_key
+                                                 severity = if_abap_behv_message=>severity-error
+                                                 v1       = language_code( translation-languagekey ) ) )
+             INTO TABLE reported-translation.
+
     ENDLOOP.
+  ENDMETHOD.
+
+  METHOD read_persisted_keys.
+    " Deliberate exception to the "no SELECT in a handler" rule: READ ENTITIES
+    " IN LOCAL MODE reads the transactional buffer, which during save already
+    " contains the very instance being created - it would always report itself
+    " as a duplicate. This check must see the persisted state only.
+    IF sources IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    SELECT FROM zabap_form_trans
+      FIELDS form AS formname, fieldname, langu AS languagekey
+      FOR ALL ENTRIES IN @sources
+      WHERE form      = @sources-formname
+        AND fieldname = @sources-fieldname
+        AND langu     = @sources-languagekey
+      INTO TABLE @result.
   ENDMETHOD.
 
   METHOD validatekeycase.
@@ -270,8 +293,8 @@ CLASS lhc_translation IMPLEMENTATION.
 
     LOOP AT translations INTO DATA(translation).
 
-      APPEND VALUE #( %tky        = translation-%tky
-                      %state_area = area_key_case ) TO reported-translation.
+      INSERT VALUE #( %tky        = translation-%tky
+                      %state_area = area_key_case ) INTO TABLE reported-translation.
 
       " HANA compares case sensitively and OData does not apply the DDIC
       " lower case flag, so a key stored in lower case can never be found by
@@ -282,16 +305,16 @@ CLASS lhc_translation IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
-      APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
+      INSERT VALUE #( %tky = translation-%tky ) INTO TABLE failed-translation.
 
-      APPEND VALUE #( %tky               = translation-%tky
+      INSERT VALUE #( %tky               = translation-%tky
                       %state_area        = area_key_case
                       %element-formname  = if_abap_behv=>mk-on
                       %element-fieldname = if_abap_behv=>mk-on
                       %msg               = new_message( id       = zcl_form_trans_rules=>message_class
                                                         number   = zcl_form_trans_rules=>msg_key_not_upper
                                                         severity = if_abap_behv_message=>severity-error ) )
-             TO reported-translation.
+            INTO TABLE reported-translation.
 
     ENDLOOP.
   ENDMETHOD.
@@ -304,14 +327,14 @@ CLASS lhc_translation IMPLEMENTATION.
       " Empty target languages are reported by the caller (message 004); building
       " an empty key here is harmless because the reads below simply find nothing.
       DATA(requested_language) = action_keys[ KEY id %tky = source-%tky ]-%param-targetlanguage.
-      APPEND VALUE #( %key-formname    = source-formname
+      INSERT VALUE #( %key-formname    = source-formname
                       %key-fieldname   = source-fieldname
                       %key-languagekey = requested_language
-                      %is_draft        = if_abap_behv=>mk-off ) TO active_keys.
-      APPEND VALUE #( %key-formname    = source-formname
+                      %is_draft        = if_abap_behv=>mk-off ) INTO TABLE active_keys.
+      INSERT VALUE #( %key-formname    = source-formname
                       %key-fieldname   = source-fieldname
                       %key-languagekey = requested_language
-                      %is_draft        = if_abap_behv=>mk-on  ) TO draft_keys.
+                      %is_draft        = if_abap_behv=>mk-on  ) INTO TABLE draft_keys.
     ENDLOOP.
 
     " Only the key fields are needed by the duplicate check in copyToLanguage.
@@ -325,7 +348,7 @@ CLASS lhc_translation IMPLEMENTATION.
          FIELDS ( formname fieldname languagekey ) WITH draft_keys
          RESULT DATA(existing_draft).
 
-    APPEND LINES OF existing_draft TO result.
+    INSERT LINES OF existing_draft INTO TABLE result.
   ENDMETHOD.
 
   METHOD build_copy_requests.
@@ -346,8 +369,7 @@ CLASS lhc_translation IMPLEMENTATION.
          RESULT DATA(translations)
          FAILED DATA(read_failed).
 
-    failed-translation = VALUE #( BASE failed-translation
-                                  ( LINES OF read_failed-translation ) ).
+    INSERT LINES OF read_failed-translation INTO TABLE failed-translation.
 
     IF translations IS INITIAL.
       RETURN.
@@ -389,14 +411,14 @@ CLASS lhc_translation IMPLEMENTATION.
                             occupied        = occupied ).
 
       IF rejection IS NOT INITIAL.
-        APPEND VALUE #( %tky = translation-%tky ) TO failed-translation.
-        APPEND VALUE #( %tky = translation-%tky
+        INSERT VALUE #( %tky = translation-%tky ) INTO TABLE failed-translation.
+        INSERT VALUE #( %tky = translation-%tky
                         %msg = new_message( id       = zcl_form_trans_rules=>message_class
                                             number   = rejection
                                             severity = if_abap_behv_message=>severity-error
                                             v1       = language_code( target_language )
                                             v2       = translation-fieldname ) )
-               TO reported-translation.
+              INTO TABLE reported-translation.
         CONTINUE.
       ENDIF.
 
@@ -404,14 +426,13 @@ CLASS lhc_translation IMPLEMENTATION.
                       fieldname   = translation-fieldname
                       languagekey = target_language ) INTO TABLE occupied.
 
-      APPEND VALUE #( %cid        = action_key-%cid
+      INSERT VALUE #( %cid        = action_key-%cid
                       formname    = translation-formname
                       fieldname   = translation-fieldname
                       languagekey = target_language
                       description = translation-description
                       maxlength   = translation-maxlength
-                      %is_draft   = if_abap_behv=>mk-on )
-             TO new_entries.
+                      %is_draft   = if_abap_behv=>mk-on ) INTO TABLE new_entries.
 
     ENDLOOP.
 
@@ -427,19 +448,18 @@ CLASS lhc_translation IMPLEMENTATION.
            FAILED DATA(failed_create)
            REPORTED DATA(reported_create).
 
-    mapped-translation   = VALUE #( BASE mapped-translation
-                                    ( LINES OF mapped_create-translation ) ).
-    failed-translation   = VALUE #( BASE failed-translation
-                                    ( LINES OF failed_create-translation ) ).
-    reported-translation = VALUE #( BASE reported-translation
-                                    ( LINES OF reported_create-translation ) ).
+    INSERT LINES OF mapped_create-translation   INTO TABLE mapped-translation.
+    INSERT LINES OF failed_create-translation   INTO TABLE failed-translation.
+    INSERT LINES OF reported_create-translation INTO TABLE reported-translation.
   ENDMETHOD.
 
   METHOD language_code.
     TRY.
-        result = xco_cp=>language( CONV #( language ) )->get_name( ).
-      CATCH cx_static_check.
-        result = language.
+        result = xco_cp=>language( language )->as( xco_cp_language=>format->iso_639 ).
+      CATCH cx_xco_runtime_exception.
+        " An unknown language key can arrive through OData or EML; the message
+        " then shows the raw key rather than dumping inside a validation.
+        CLEAR result.
     ENDTRY.
 
     IF result IS INITIAL.

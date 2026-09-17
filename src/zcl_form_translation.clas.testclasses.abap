@@ -6,7 +6,9 @@
 "! persistence. Subclassing is used because the read is a protected method
 "! rather than an injected collaborator - a deliberate trade-off to keep the
 "! object count of the package minimal.
-CLASS ltd_translation_stub DEFINITION INHERITING FROM zcl_form_translation.
+CLASS ltd_translation_stub DEFINITION
+  INHERITING FROM zcl_form_translation
+  FINAL FOR TESTING.
   PUBLIC SECTION.
     "! Rows the stub hands back instead of reading the database.
     DATA mock_data TYPE zcl_form_translation=>translations.
@@ -83,7 +85,7 @@ CLASS ltc_translate_form IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 'Success!'
         act = labels-lbl_name
-        msg = 'A matching row must overwrite the component of the same name' ).
+        msg = `A matching row must overwrite the component of the same name` ).
   ENDMETHOD.
 
   METHOD given_len_3_then_truncated.
@@ -106,7 +108,7 @@ CLASS ltc_translate_form IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 'Suc'
         act = labels-lbl_name
-        msg = 'Text longer than LENGTH must be cut at print time' ).
+        msg = `Text longer than LENGTH must be cut at print time` ).
   ENDMETHOD.
 
   METHOD given_2_rows_then_others_kept.
@@ -128,17 +130,17 @@ CLASS ltc_translate_form IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 'New Title'
         act = labels-title
-        msg = 'First translated component was not applied' ).
+        msg = `First translated component was not applied` ).
 
     cl_abap_unit_assert=>assert_equals(
         exp = 'New Footer'
         act = labels-footer
-        msg = 'Second translated component was not applied' ).
+        msg = `Second translated component was not applied` ).
 
     cl_abap_unit_assert=>assert_equals(
         exp = 'Keep Me'
         act = labels-customer
-        msg = 'Components without a translation row must stay untouched' ).
+        msg = `Components without a translation row must stay untouched` ).
   ENDMETHOD.
 
   METHOD given_no_form_then_unchanged.
@@ -160,7 +162,7 @@ CLASS ltc_translate_form IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 'Original'
         act = labels-lbl_name
-        msg = 'An initial form name must return before touching the structure' ).
+        msg = `An initial form name must return before touching the structure` ).
   ENDMETHOD.
 
   METHOD given_empty_text_then_kept.
@@ -182,7 +184,7 @@ CLASS ltc_translate_form IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 'Original'
         act = labels-lbl_name
-        msg = 'A blank description must not silently wipe the default text' ).
+        msg = `A blank description must not silently wipe the default text` ).
   ENDMETHOD.
 
   METHOD given_ghost_field_then_skipped.
@@ -202,7 +204,7 @@ CLASS ltc_translate_form IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 'New Title'
         act = labels-title
-        msg = 'A row for a non-existing component must be skipped without side effects' ).
+        msg = `A row for a non-existing component must be skipped without side effects` ).
   ENDMETHOD.
 
   METHOD given_len_0_then_full_text.
@@ -223,7 +225,7 @@ CLASS ltc_translate_form IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 'A rather long description that is not truncated'
         act = labels-lbl_name
-        msg = 'LENGTH 0 means no limit and must never truncate' ).
+        msg = `LENGTH 0 means no limit and must never truncate` ).
   ENDMETHOD.
 
   METHOD given_short_text_then_kept.
@@ -244,26 +246,55 @@ CLASS ltc_translate_form IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 'Hi'
         act = labels-lbl_name
-        msg = 'Text shorter than LENGTH must be applied unchanged' ).
+        msg = `Text shorter than LENGTH must be applied unchanged` ).
   ENDMETHOD.
 
+ENDCLASS.
+
+
+"! <p class="shorttext" lang="EN">Fixed logon language</p>
+"! Stands in for the platform context so that the "no language given" path of
+"! {@link zcl_form_translation} can be exercised with a known logon language.
+CLASS ltd_fixed_user_context DEFINITION FINAL FOR TESTING.
+  PUBLIC SECTION.
+    INTERFACES zif_form_trans_user_context.
+
+    "! @parameter language | Language the double reports as the logon language.
+    METHODS constructor
+      IMPORTING language TYPE zabap_form_trans_langu.
+
+  PRIVATE SECTION.
+    DATA language TYPE zabap_form_trans_langu.
+ENDCLASS.
+
+
+CLASS ltd_fixed_user_context IMPLEMENTATION.
+  METHOD constructor.
+    me->language = language.
+  ENDMETHOD.
+
+  METHOD zif_form_trans_user_context~language.
+    result = language.
+  ENDMETHOD.
 ENDCLASS.
 
 
 "! <p class="shorttext" lang="EN">Exposes the protected database read</p>
 "! Test helper: get_translations is protected, so a subclass is used to reach
 "! it from {@link .ltc_get_translations}.
-CLASS lth_translation_reader DEFINITION INHERITING FROM zcl_form_translation.
+CLASS lth_translation_reader DEFINITION
+  INHERITING FROM zcl_form_translation
+  FINAL FOR TESTING.
   PUBLIC SECTION.
     "! Calls the protected implementation directly.
     "!
     "! @parameter formname        | Form key to read.
-    "! @parameter langu           | Target language.
+    "! @parameter langu           | Target language; the logon language when omitted.
     "! @parameter enable_fallback | Fall back to the default language.
     "! @parameter result          | Rows found, after per-field deduplication.
     METHODS read
       IMPORTING formname        TYPE zabap_form_trans_name
-                langu           TYPE zabap_form_trans_langu
+                langu           TYPE zabap_form_trans_langu OPTIONAL
                 enable_fallback TYPE abap_boolean DEFAULT abap_true
       RETURNING VALUE(result)   TYPE zcl_form_translation=>translations.
 ENDCLASS.
@@ -306,6 +337,8 @@ CLASS ltc_get_translations DEFINITION FINAL
     METHODS given_no_rows_then_cached     FOR TESTING.
     METHODS given_cleared_then_reloads    FOR TESTING.
     METHODS given_lower_form_then_found   FOR TESTING.
+    METHODS given_no_langu_then_logon_lang FOR TESTING.
+    METHODS given_no_logon_langu_then_dflt FOR TESTING.
 
 ENDCLASS.
 
@@ -313,7 +346,7 @@ ENDCLASS.
 CLASS ltc_get_translations IMPLEMENTATION.
 
   METHOD class_setup.
-    environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZABAP_FORM_TRANS' ) ) ).
+    environment = cl_osql_test_environment=>create( VALUE #( ( 'ZABAP_FORM_TRANS' ) ) ).
   ENDMETHOD.
 
   METHOD class_teardown.
@@ -323,7 +356,7 @@ CLASS ltc_get_translations IMPLEMENTATION.
   METHOD setup.
     environment->clear_doubles( ).
     zcl_form_translation=>clear_buffer( ).
-    cut = NEW lth_translation_reader( ).
+    cut = NEW lth_translation_reader( NEW ltd_fixed_user_context( 'D' ) ).
   ENDMETHOD.
 
   METHOD given_standard_rows.
@@ -344,13 +377,10 @@ CLASS ltc_get_translations IMPLEMENTATION.
     DATA(result) = cut->read( formname = 'ZTEST' langu = 'D' ).
 
     " --- ASSERT
-    READ TABLE result ASSIGNING FIELD-SYMBOL(<title_row>)
-      WITH KEY by_field COMPONENTS fieldname = 'TITLE'.
-
     cl_abap_unit_assert=>assert_equals(
         exp = 'Rechnung'
-        act = <title_row>-descr
-        msg = 'When both languages exist the target language must win' ).
+        act = result[ fieldname = 'TITLE' ]-descr
+        msg = `When both languages exist the target language must win` ).
   ENDMETHOD.
 
   METHOD given_gap_then_default_lang.
@@ -361,13 +391,10 @@ CLASS ltc_get_translations IMPLEMENTATION.
     DATA(result) = cut->read( formname = 'ZTEST' langu = 'D' ).
 
     " --- ASSERT
-    READ TABLE result ASSIGNING FIELD-SYMBOL(<footer_row>)
-      WITH KEY by_field COMPONENTS fieldname = 'FOOTER'.
-
     cl_abap_unit_assert=>assert_equals(
         exp = 'Thank you'
-        act = <footer_row>-descr
-        msg = 'A field missing in the target language must fall back to English' ).
+        act = result[ fieldname = 'FOOTER' ]-descr
+        msg = `A field missing in the target language must fall back to English` ).
   ENDMETHOD.
 
   METHOD given_no_fallback_then_1_row.
@@ -383,7 +410,7 @@ CLASS ltc_get_translations IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 1
         act = lines( result )
-        msg = 'With the fallback switched off only the German row may be returned' ).
+        msg = `With the fallback switched off only the German row may be returned` ).
   ENDMETHOD.
 
   METHOD given_2nd_call_then_buffered.
@@ -399,7 +426,7 @@ CLASS ltc_get_translations IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 2
         act = lines( result )
-        msg = 'With the data removed a second call can only succeed from the buffer' ).
+        msg = `With the data removed a second call can only succeed from the buffer` ).
   ENDMETHOD.
 
   METHOD given_no_rows_then_cached.
@@ -408,7 +435,7 @@ CLASS ltc_get_translations IMPLEMENTATION.
 
     cl_abap_unit_assert=>assert_initial(
         act = first_result
-        msg = 'An unknown form must return no rows' ).
+        msg = `An unknown form must return no rows` ).
 
     given_standard_rows( ).
 
@@ -418,7 +445,7 @@ CLASS ltc_get_translations IMPLEMENTATION.
     " --- ASSERT
     cl_abap_unit_assert=>assert_initial(
         act = second_result
-        msg = 'The empty outcome is cached, so newly inserted rows must not appear' ).
+        msg = `The empty outcome is cached, so newly inserted rows must not appear` ).
   ENDMETHOD.
 
   METHOD given_cleared_then_reloads.
@@ -434,7 +461,7 @@ CLASS ltc_get_translations IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 2
         act = lines( result )
-        msg = 'clear_buffer must discard the cached empty result and read again' ).
+        msg = `clear_buffer must discard the cached empty result and read again` ).
   ENDMETHOD.
 
   METHOD given_lower_form_then_found.
@@ -448,7 +475,36 @@ CLASS ltc_get_translations IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         exp = 2
         act = lines( result )
-        msg = 'A caller passing the form name in lower case must still find the rows' ).
+        msg = `A caller passing the form name in lower case must still find the rows` ).
+  ENDMETHOD.
+
+  METHOD given_no_langu_then_logon_lang.
+    " --- ARRANGE
+    given_standard_rows( ).
+
+    " --- ACT
+    DATA(result) = cut->read( 'ZTEST' ).
+
+    " --- ASSERT
+    cl_abap_unit_assert=>assert_equals(
+        exp = 'Rechnung'
+        act = result[ fieldname = 'TITLE' ]-descr
+        msg = `Without an explicit language the logon language of the user context must be used` ).
+  ENDMETHOD.
+
+  METHOD given_no_logon_langu_then_dflt.
+    " --- ARRANGE
+    given_standard_rows( ).
+    cut = NEW lth_translation_reader( NEW ltd_fixed_user_context( VALUE #( ) ) ).
+
+    " --- ACT
+    DATA(result) = cut->read( 'ZTEST' ).
+
+    " --- ASSERT
+    cl_abap_unit_assert=>assert_equals(
+        exp = 'Invoice'
+        act = result[ fieldname = 'TITLE' ]-descr
+        msg = `When the platform cannot resolve the logon language the default language must be read` ).
   ENDMETHOD.
 
 ENDCLASS.

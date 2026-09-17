@@ -18,6 +18,11 @@
      <LANGU>E</LANGU>
      <DESCRIPT>Invalidates the in-memory translation buffer</DESCRIPT>
     </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CMPNAME>CONSTRUCTOR</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Wires the platform dependencies</DESCRIPT>
+    </SEOCOMPOTX>
    </DESCRIPTIONS>
    <DESCRIPTIONS_SUB>
     <SEOSUBCOTX>
