@@ -3,16 +3,13 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>ZBP_I_FORM_TRANS</CLSNAME>
+    <CLSNAME>ZCL_FORM_TRANS_AUTHORITY</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Behavior pool for ZI_FORM_TRANS</DESCRIPT>
-    <CATEGORY>06</CATEGORY>
+    <DESCRIPT>Authority check against ZFORMTRA</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>
     <UNICODE>5</UNICODE>
-    <CLSDEFINT>ZI_FORM_TRANS</CLSDEFINT>
-    <WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>
    </VSEOCLASS>
   </asx:values>
  </asx:abap>

@@ -1,12 +1,50 @@
+"! <p class="shorttext" lang="EN">Composition root of the behavior pool</p>
+"! Handler classes have no constructor of their own, so their collaborators
+"! are resolved here. The inject_* hooks let a test swap a collaborator for a
+"! double; passing an unbound reference restores the production default.
+CLASS lcl_form_trans_factory DEFINITION FINAL CREATE PRIVATE.
+  PUBLIC SECTION.
+    "! Authority check the handler asks before granting an operation.
+    CLASS-METHODS authority
+      RETURNING VALUE(result) TYPE REF TO zif_form_trans_authority.
+
+    "! Test hook: replaces the production authority check until reset.
+    "!
+    "! @parameter authority | Double to hand out, or unbound to restore the default.
+    CLASS-METHODS inject_authority
+      IMPORTING authority TYPE REF TO zif_form_trans_authority.
+
+  PRIVATE SECTION.
+    CLASS-DATA authority_override TYPE REF TO zif_form_trans_authority.
+ENDCLASS.
+
+
+CLASS lcl_form_trans_factory IMPLEMENTATION.
+  METHOD authority.
+    result = COND #( WHEN authority_override IS BOUND
+                     THEN authority_override
+                     ELSE NEW zcl_form_trans_authority( ) ).
+  ENDMETHOD.
+
+  METHOD inject_authority.
+    authority_override = authority.
+  ENDMETHOD.
+ENDCLASS.
+
+
+" Forward declaration so the handler can name its test class as friend.
+CLASS ltc_authorizations DEFINITION DEFERRED FOR TESTING.
+
 "! <p class="shorttext" lang="EN">Behavior implementation for ZI_FORM_TRANS</p>
-"! Handles the ON SAVE validations, the instance features and the
-"! copyToLanguage factory action of {@link zi_form_trans}.
+"! Handles the global authorization, the ON SAVE validations, the instance
+"! features and the copyToLanguage factory action of {@link zi_form_trans}.
 "! <br>
 "! Every validation reports into its own state area, so the framework replaces
 "! the messages of a previous run instead of piling them up in the message
 "! popover on every Prepare. The rules themselves live in {@link zcl_form_trans_rules}
 "! and carry no RAP dependency.
-CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
+CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler
+  FRIENDS ltc_authorizations.
   PRIVATE SECTION.
 
     "! State area of validateMaxLength.
@@ -18,15 +56,34 @@ CLASS lhc_translation DEFINITION INHERITING FROM cl_abap_behavior_handler.
     "! State area of validateKeyCase.
     CONSTANTS area_key_case    TYPE string VALUE 'KEY_CASE'.
 
-    "! Grants the instance bound operations. Every caller that reaches the
-    "! entity is currently allowed to change it; a real check follows once the
-    "! authorization object is in place.
+    "! Reported response of the interaction phase, as filled by the
+    "! authorization handler.
+    TYPES reported_early TYPE RESPONSE FOR REPORTED EARLY zi_form_trans.
+
+    "! Grants or denies the operations the framework asks about, based on
+    "! authorization object ZFORMTRA. copyToLanguage creates rows and follows
+    "! the create activity; Edit is the draft entry point of an update and
+    "! follows the change activity.
     "!
-    "! @parameter keys                     | Instances under evaluation.
     "! @parameter requested_authorizations | Operations the framework asks about.
-    "! @parameter result                   | Verdict per instance and operation.
-    METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
-      IMPORTING keys REQUEST requested_authorizations FOR translation RESULT result.
+    "! @parameter result                   | Verdict per requested operation.
+    METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
+      IMPORTING REQUEST requested_authorizations FOR translation RESULT result.
+
+    "! Turns one requested operation into a verdict and, when denied, reports
+    "! the global message that names the missing activity.
+    "!
+    "! @parameter requested | Whether the framework asked about this operation.
+    "! @parameter activity  | Activity of ZFORMTRA the operation needs.
+    "! @parameter denial    | Message to report when the activity is missing.
+    "! @parameter verdict   | Verdict field of the result to fill.
+    "! @parameter reported  | Reported response the denial message goes into.
+    METHODS authorize
+      IMPORTING requested TYPE if_abap_behv=>t_xflag
+                activity  TYPE zif_form_trans_authority=>activity
+                denial    TYPE symsgno
+      CHANGING  verdict   TYPE if_abap_behv=>t_xflag
+                !reported TYPE reported_early.
 
     "! Enables copyToLanguage only for rows that already carry a description,
     "! so the button is not offered when it would copy nothing meaningful.
@@ -126,18 +183,55 @@ ENDCLASS.
 
 
 CLASS lhc_translation IMPLEMENTATION.
-  METHOD get_instance_authorizations.
-    result = VALUE #(
-        FOR key IN keys
-        ( %tky                   = key-%tky
-          %update                = COND #( WHEN requested_authorizations-%update = if_abap_behv=>mk-on
-                                           THEN if_abap_behv=>auth-allowed )
-          %action-edit           = COND #( WHEN requested_authorizations-%action-edit = if_abap_behv=>mk-on
-                                           THEN if_abap_behv=>auth-allowed )
-          %action-copytolanguage = COND #( WHEN requested_authorizations-%action-copytolanguage = if_abap_behv=>mk-on
-                                           THEN if_abap_behv=>auth-allowed )
-          %delete                = COND #( WHEN requested_authorizations-%delete = if_abap_behv=>mk-on
-                                           THEN if_abap_behv=>auth-allowed ) ) ).
+  METHOD get_global_authorizations.
+    authorize( EXPORTING requested = requested_authorizations-%create
+                         activity  = zif_form_trans_authority=>activities-create
+                         denial    = zcl_form_trans_rules=>msg_create_unauthorized
+               CHANGING  verdict   = result-%create
+                         reported  = reported ).
+
+    authorize( EXPORTING requested = requested_authorizations-%update
+                         activity  = zif_form_trans_authority=>activities-change
+                         denial    = zcl_form_trans_rules=>msg_change_unauthorized
+               CHANGING  verdict   = result-%update
+                         reported  = reported ).
+
+    authorize( EXPORTING requested = requested_authorizations-%delete
+                         activity  = zif_form_trans_authority=>activities-delete
+                         denial    = zcl_form_trans_rules=>msg_change_unauthorized
+               CHANGING  verdict   = result-%delete
+                         reported  = reported ).
+
+    authorize( EXPORTING requested = requested_authorizations-%action-edit
+                         activity  = zif_form_trans_authority=>activities-change
+                         denial    = zcl_form_trans_rules=>msg_change_unauthorized
+               CHANGING  verdict   = result-%action-edit
+                         reported  = reported ).
+
+    authorize( EXPORTING requested = requested_authorizations-%action-copytolanguage
+                         activity  = zif_form_trans_authority=>activities-create
+                         denial    = zcl_form_trans_rules=>msg_create_unauthorized
+               CHANGING  verdict   = result-%action-copytolanguage
+                         reported  = reported ).
+  ENDMETHOD.
+
+  METHOD authorize.
+    IF requested = if_abap_behv=>mk-off.
+      RETURN.
+    ENDIF.
+
+    IF lcl_form_trans_factory=>authority( )->is_allowed( activity ) = abap_true.
+      verdict = if_abap_behv=>auth-allowed.
+      RETURN.
+    ENDIF.
+
+    verdict = if_abap_behv=>auth-unauthorized.
+
+    INSERT VALUE #( %global = if_abap_behv=>mk-on
+                    %msg    = new_message( id       = zcl_form_trans_rules=>message_class
+                                           number   = denial
+                                           severity = if_abap_behv_message=>severity-error ) )
+           INTO TABLE reported-translation.
   ENDMETHOD.
 
   METHOD get_instance_features.

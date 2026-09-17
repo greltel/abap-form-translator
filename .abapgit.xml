@@ -13,6 +13,7 @@
     </item>
    </REQUIREMENTS>
    <VERSION_CONSTANT>ZCL_FORM_TRANSLATION=&gt;VERSION</VERSION_CONSTANT>
+   <ABAP_LANGUAGE_VERSION>cloudDevelopment</ABAP_LANGUAGE_VERSION>
   </DATA>
  </asx:values>
 </asx:abap>

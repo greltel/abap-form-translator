@@ -3,18 +3,18 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOINTERF>
-    <CLSNAME>ZIF_FORM_TRANSLATION</CLSNAME>
+    <CLSNAME>ZIF_FORM_TRANS_AUTHORITY</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Runtime translation of form labels</DESCRIPT>
+    <DESCRIPT>Authority check for form translations</DESCRIPT>
     <EXPOSURE>2</EXPOSURE>
     <STATE>1</STATE>
     <UNICODE>5</UNICODE>
    </VSEOINTERF>
    <DESCRIPTIONS>
     <SEOCOMPOTX>
-     <CMPNAME>TRANSLATE_FORM</CMPNAME>
+     <CMPNAME>IS_ALLOWED</CMPNAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Translates fields of a structure</DESCRIPT>
+     <DESCRIPT>Tells whether the user may perform an activity</DESCRIPT>
     </SEOCOMPOTX>
    </DESCRIPTIONS>
   </asx:values>

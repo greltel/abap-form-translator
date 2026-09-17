@@ -7,7 +7,7 @@ persistent table zabap_form_trans
 draft table zabap_form_drft
 lock master
 total etag LocalLastChangedAt
-authorization master ( instance )
+authorization master ( global )
 etag master LocalLastChangedAt
 {
   create;

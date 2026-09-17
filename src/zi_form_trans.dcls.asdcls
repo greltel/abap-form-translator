@@ -1,0 +1,10 @@
+@EndUserText.label: 'Access control for ZI_FORM_TRANS'
+@MappingRole: true
+define role ZI_FORM_TRANS {
+  grant
+    select
+      on
+        ZI_FORM_TRANS
+          where
+            ( ) = aspect pfcg_auth( ZFORMTRA, ACTVT = '03' );
+}

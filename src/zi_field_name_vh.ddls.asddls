@@ -1,4 +1,4 @@
-@AccessControl.authorizationCheck: #NOT_REQUIRED
+@AccessControl.authorizationCheck: #CHECK
 @Search.searchable: true
 
 @EndUserText.label: 'Value Help for Field Names'

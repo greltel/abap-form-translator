@@ -7,6 +7,7 @@
      <NAME>ZUI_FORM_TRANS_BIN</NAME>
      <TYPE>SRVB/SVB</TYPE>
      <DESCRIPTION>Service Binding for Form Translations</DESCRIPTION>
+     <ABAP_LANGU_VERSION>5</ABAP_LANGU_VERSION>
     </METADATA>
     <CONTENT>
      <BIND_TYPE_IMPL>

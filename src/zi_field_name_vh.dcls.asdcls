@@ -1,0 +1,10 @@
+@EndUserText.label: 'Access control for ZI_FIELD_NAME_VH'
+@MappingRole: true
+define role ZI_FIELD_NAME_VH {
+  grant
+    select
+      on
+        ZI_FIELD_NAME_VH
+          where
+            ( ) = aspect pfcg_auth( ZFORMTRA, ACTVT = '03' );
+}

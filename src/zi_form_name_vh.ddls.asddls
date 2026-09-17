@@ -1,4 +1,4 @@
-@AccessControl.authorizationCheck: #NOT_REQUIRED
+@AccessControl.authorizationCheck: #CHECK
 @Search.searchable: true
 @EndUserText.label: 'Value Help for Form Names'
 define view entity ZI_FORM_NAME_VH

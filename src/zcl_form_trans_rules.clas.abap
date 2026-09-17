@@ -28,8 +28,11 @@ CLASS zcl_form_trans_rules DEFINITION
     CONSTANTS msg_text_truncated    TYPE symsgno VALUE '006'.
     "! Form and field names must be entered in upper case.
     CONSTANTS msg_key_not_upper     TYPE symsgno VALUE '007'.
+    "! You are not authorized to create form translations.
+    CONSTANTS msg_create_unauthorized TYPE symsgno VALUE '008'.
+    "! You are not authorized to change or delete form translations.
+    CONSTANTS msg_change_unauthorized TYPE symsgno VALUE '009'.
     "! Only one source row can be copied to language &amp;1 for field &amp;2.
-    "! Messages 008 and 009 are reserved for the authorization checks.
     CONSTANTS msg_ambiguous_source  TYPE symsgno VALUE '010'.
 
     "! Upper bound of domain {@link DOMA:ZABAP_FORM_MAXLENGTH}. Its fixed values

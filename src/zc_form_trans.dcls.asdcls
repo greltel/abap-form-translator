@@ -1,0 +1,10 @@
+@EndUserText.label: 'Access control for ZC_FORM_TRANS'
+@MappingRole: true
+define role ZC_FORM_TRANS {
+  grant
+    select
+      on
+        ZC_FORM_TRANS
+          where
+            inheriting conditions from entity ZI_FORM_TRANS;
+}
