@@ -3,6 +3,9 @@
   "input_filter": [
     "zcl_form_translation.clas",
     "zif_form_translation.intf",
+    "zcl_form_trans_user_context.clas",
+    "zif_form_trans_user_context.intf",
+    "zcl_form_trans_rules.clas",
     "zabap_form_trans_msg.msag",
     "zabap_form_trans.tabl",
     "zabap_form_drft.tabl",
@@ -11,13 +14,19 @@
     "zabap_form_trans_field.dtel",
     "zabap_form_trans_descr.dtel",
     "zabap_form_trans_maxlen.dtel",
-    "zabap_form_maxlength.doma",
-    "zcl_form_trans_rules.clas"
+    "zabap_form_maxlength.doma"
   ],
   "output_folder": "output",
   "libs": [
     {
-      "url": "https://github.com/open-abap/open-abap-core"
+      "url": "https://github.com/open-abap/open-abap-core",
+      "exclude_filter": [
+        "cl_abap_context_info\\.clas\\.abap$"
+      ]
+    },
+    {
+      "folder": "/open-abap-overrides",
+      "files": "/**/*.abap"
     },
     {
       "url": "https://github.com/open-abap/open-abap-rap"
