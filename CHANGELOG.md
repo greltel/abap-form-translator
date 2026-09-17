@@ -34,8 +34,6 @@ installations — read the upgrade notes.
   instead of the internal key.
 - `ZCL_FORM_TRANS_RULES=>check_copy_request` takes a `copy_request` structure
   instead of six scalar parameters.
-- The Copy Language side effect is declared in the base behavior definition and
-  reused by the projection.
 - The behavior implementation of the Copy Language action is split into
   `queue_copies`, `report_rejection` and `create_drafts`.
 - Message texts in the tests use string literals in backticks; internal tables
