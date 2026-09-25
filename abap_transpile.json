@@ -44,13 +44,6 @@
     "setup": {
       "filename": "../db_setup.mjs",
       "preFunction": "setupDatabase"
-    },
-    "skip": [
-      {
-        "object": "ZCL_FORM_TRANS_USER_CONTEXT",
-        "class": "LTC_USER_CONTEXT",
-        "method": "WHEN_ASKED_THEN_LOGON_LANGU"
-      }
-    ]
+    }
   }
 }
