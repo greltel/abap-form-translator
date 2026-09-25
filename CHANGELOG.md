@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- The user context test runs off-stack as well: open-abap-xco implements the
+  XCO language API since its PR #47, so the `skip` list in `abap_transpile.json`
+  is gone and all 43 transpilable tests execute on every push.
+
 ## [2.0.0] - 2026-09
 
 First release built as **ABAP for Cloud Development**. Breaking for existing
