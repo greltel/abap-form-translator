@@ -46,7 +46,7 @@ program picks them up at runtime — no SE63, no transport for a changed label.
   translation into another language straight from the list.
 * **Authorization:** read and maintenance access is governed by one authorization
   object, `ZFORMTRA`, checked in CDS access control and in the behavior implementation.
-* **Tested:** 66 ABAP Unit tests, 42 of which also run outside SAP on every push.
+* **Tested:** 66 ABAP Unit tests, 43 of which also run outside SAP on every push.
 
 ![2026-03-07 23-40-52](https://github.com/user-attachments/assets/becf5ae2-4df8-4431-baca-0b66c9ba50a2)
 
@@ -251,12 +251,11 @@ without an SAP system:
     npm run check
 
 `check` runs abaplint (Clean ABAP rules plus a syntax check against the released
-ABAP Cloud API) and 42 transpiled tests of `ZCL_FORM_TRANSLATION`,
+ABAP Cloud API) and all 43 transpiled tests of `ZCL_FORM_TRANSLATION`,
 `ZCL_FORM_TRANS_RULES` and `ZCL_FORM_TRANS_USER_CONTEXT`, backed by an in-memory
 SQLite database so SELECT and `CL_OSQL_TEST_ENVIRONMENT` behave as in the system.
-One test is skipped off-stack (`abap_transpile.json`, `skip`): the user context
-test needs the XCO language API, which the open-abap stubs declare but do not
-implement. The behavior pool tests need the RAP runtime and run in ADT only.
+Nothing is skipped off-stack. The behavior pool tests need the RAP runtime and
+run in ADT only.
 
 ## License
 
