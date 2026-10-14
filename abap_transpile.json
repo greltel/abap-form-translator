@@ -34,6 +34,7 @@
       "url": "https://github.com/open-abap/open-abap-xco"
     }
   ],
+  "skip_duplicate_dependencies": true,
   "write_unit_tests": true,
   "write_source_map": true,
   "options": {
